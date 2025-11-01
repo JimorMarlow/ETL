@@ -9,9 +9,11 @@ Jimor Marlow, jimor@inbox.ru
 
 https://github.com/JimorMarlow/etl
 
-### Current status: `не собирается esp32, разбираюсь с зависимостями, чтобы выложить как отдельную библиотеку...`
-esp8266 - собирается, ошибок нет
-esp32 - не собирается, разбираюсь...
+### Current status: ![Version](https://img.shields.io/github/package-json/v/JimorMarlow/ETL)
+Environment    Status    Duration
+-------------  --------  ------------
+esp8266        SUCCESS   00:00:10.518
+esp32c3        SUCCESS   00:00:15.373
 
 **Features:**
 - `etl::filter` filters: moving average, median3, median5, exponential. Базовый набор для фильтрации выходного сигнала. То, что в Arduino библиотеке должно было быть из коробки.
