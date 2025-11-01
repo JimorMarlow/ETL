@@ -18,7 +18,7 @@ https://github.com/JimorMarlow/etl
 - Memory-efficient algorithms
 
 **Dependancy:**
-`GTimer` by AlexGyver (gyverlibs/GTimer@^1.1.1)
+`GTimer` by AlexGyver ([gyverlibs/GTimer@^1.1.1](https://github.com/GyverLibs/GTimer))
 
     Большое спасибо за уроки и библиотеки! etl, в общем-то, и началась только для того, чтобы добавить функционал, которого не было у Алекса. Например, при добавлении элементов в фильтр первые отсчеты были нулевые. Решил сделать свою реализацию медианного и скользящего среднего, и понеслось...
 
