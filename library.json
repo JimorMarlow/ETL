@@ -1,0 +1,54 @@
+{
+  "name": "ETL",
+  "version": "0.8.13",
+  "description": "Embedded Template Library for Arduino - [another one] lightweight STL-like containers and algorithms for embedded systems",
+  "keywords": "etl, stl, template, container, algorithm, embedded, arduino, esp8266, esp32",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JimorMarlow/etl.git"
+  },
+  "authors": [
+    {
+      "name": "Jimor Marlow",
+      "email": "jimor@inbox.ru",
+      "maintainer": true
+    }
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/JimorMarlow/etl",
+  "frameworks": "arduino",
+  "platforms": ["espressif8266", "espressif32"],
+  "headers": [
+    "etl_utility.h",
+    "etl_memory.h",
+    "etl_array.h",
+    "etl_vector.h",
+    "etl_lookup.h",
+    "etl_algorithm.h",
+    "etl_optional.h",
+    "etl_queue.h",
+    "etl_color.h",
+    "etl_espnow.cpp",
+    "etl_espnow.h",
+    "etl_espwifi.h",
+    "etl_led.cpp",
+    "etl_led.h",
+    "etl_math.h",
+    "etl_test.h",
+    "etl_test.cpp",
+    "filter/base.h",
+    "filter/exponential.h",
+    "filter/median.h",
+    "filter/moving_average.h",
+    "sensor/temperature.h",
+    "sensor/ntc_temperature_3950_50K_table.h",
+    "tools/stop_watch.h",
+    "tools/strings.h"
+  ],
+  "export": {
+    "include": [
+      "src/*",
+      "examples/*"
+    ]
+  }
+}
