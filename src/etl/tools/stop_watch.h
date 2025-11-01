@@ -1,7 +1,7 @@
 #pragma once
 //////////////////////////////////////////////////
 // Измерение скорости выполнения обработок и использование вектора для запоминания данных
-#include "etl_vector.h"
+#include "../etl_vector.h"
 namespace etl {
 namespace tools {
 

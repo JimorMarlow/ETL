@@ -3,8 +3,8 @@
 // Median3 фильтр - оптимизированная версия для окна размером 3
 
 #include "Arduino.h"
-#include "filter/base.h"
-#include "etl_queue.h"
+#include "base.h"
+#include "../etl_queue.h"
 
 namespace etl
 {

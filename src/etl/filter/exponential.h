@@ -12,8 +12,8 @@
 // α ≈ 0.7 - слабое сглаживание, быстрая реакция на изменения
 
 #include "Arduino.h"
-#include "filter/base.h"
-#include "etl_optional.h"
+#include "base.h"
+#include "../etl_optional.h"
 
 namespace etl
 {

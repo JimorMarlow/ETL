@@ -1,5 +1,5 @@
 #pragma once 
-#include "etl_lookup.h"
+#include "../etl_lookup.h"
 // Температурный датчик 3950 50K
 const etl::lookup_t<float, float> ntc_temperature_sensor_3950_50K_p[] PROGMEM = {
 //   {R(kOhms). Temp(deg.C)

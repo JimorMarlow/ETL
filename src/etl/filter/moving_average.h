@@ -2,8 +2,8 @@
 
 #pragma once
 #include "Arduino.h"
-#include "filter/base.h"
-#include "etl_queue.h"
+#include "base.h"
+#include "../etl_queue.h"
 namespace etl
 {
 namespace filter
