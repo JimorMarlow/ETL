@@ -19,6 +19,7 @@
   "frameworks": "arduino",
   "platforms": ["espressif8266", "espressif32"],
   "headers": [
+    "etl.h",
     "etl_utility.h",
     "etl_memory.h",
     "etl_array.h",
