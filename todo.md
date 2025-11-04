@@ -2,7 +2,7 @@
 
 1. Структура проекта библиотеки
 text
-etl-arduino/
+etl-esp/
 ├── library.json          # Метаданные библиотеки
 ├── library.properties    # Для Arduino IDE
 ├── src/
@@ -30,7 +30,7 @@ etl-arduino/
 2. Файл library.json (для PlatformIO)
 json
 {
-  "name": "ETL-Arduino",
+  "name": "ETL-ESP",
   "version": "1.0.0",
   "description": "Embedded Template Library for Arduino - lightweight STL-like containers and algorithms for embedded systems",
   "keywords": "etl, stl, template, container, algorithm, embedded, arduino, esp8266, esp32",

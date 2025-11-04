@@ -32,3 +32,14 @@ https://github.com/JimorMarlow/etl
 ## Supported Platforms
 - ESP8266 (tested boards: Node MCU, Wemos D1 mini)
 - ESP32 (tested boards: ESP32-C3 ...)
+
+---
+
+## Version Hystory | История версий
+
+### v0.9.1 (2025-11-04)
+- added: automatic version update from etl_version.h
+
+### v0.8.15 (2025-11-04)
+- changed: library title `ETL` to `ETL-ESP` to avoid collisions with existing libs
+

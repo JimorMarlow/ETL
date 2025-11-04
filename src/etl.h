@@ -2,6 +2,7 @@
 
 // Главный включаемый файл для библиотеки ETL (не знаю нужен ли он?)
 
+#include "etl/etl_version.h"
 #include "etl/etl_array.h"
 #include "etl/etl_vector.h"
 #include "etl/etl_lookup.h"

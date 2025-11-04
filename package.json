@@ -1,5 +1,5 @@
 {
-  "name": "etl",
-  "version": "0.8.14",
+  "name": "etl-esp",
+  "version": "0.9.1",
   "description": "ETL (embedded template library), Lightweight C++ template library optimized for embedded systems (Arduino, ESP8266/ESP32). Provides STL-like containers and algorithms with minimal memory footprint"
 }
