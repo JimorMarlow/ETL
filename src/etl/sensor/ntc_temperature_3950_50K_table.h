@@ -277,8 +277,8 @@ const etl::lookup_t<float, float> ntc_temperature_sensor_3950_50K_p[] PROGMEM = 
 {	0.1069	,	251	}
 };
 
-// Копиия для сравнения скорости массива в памяти и в PROGMEM
-const etl::lookup_t<float, float> ntc_temperature_sensor_3950_50K[] PROGMEM = {
+// Копиия для сравнения скорости массива в памяти
+const etl::lookup_t<float, float> ntc_temperature_sensor_3950_50K[]  = {
 //   {R(kOhms). Temp(deg.C)
 {	483.8463	,	-20	},
 {	456.6244	,	-19	},

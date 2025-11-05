@@ -37,6 +37,9 @@ https://github.com/JimorMarlow/etl
 
 ## Version Hystory | История версий
 
+### v0.9.2 (2025-11-05)
+- added: fade using lookup table [... in progress]
+
 ### v0.9.1 (2025-11-04)
 - added: automatic version update from etl_version.h
 

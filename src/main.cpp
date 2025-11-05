@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "etl/etl_test.h"
+#include "etl/etl_version.h"
 
 void setup() {
     Serial.begin(115200);
@@ -15,6 +16,7 @@ void setup() {
 
 void loop() {
     // Обязательно добавь задержку
-    delay(1000);
+    Serial.print("ETL version "); Serial.println(ETL_VERSION_STRING);
     Serial.println("Running...");
+    delay(1000);    
 }

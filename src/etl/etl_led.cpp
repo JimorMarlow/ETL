@@ -126,16 +126,23 @@ bool led::tick()
     if(_timer_Fade)
     {
         bool is_runnig = !_timer_Fade->tick();
-        if(/*_timer_Fade->running()*/ is_runnig)
+        if(is_runnig)
         {
             // Плавно гасим до нулевого уровня
-            uint32_t ms_left = _fade_direction ? _fade_time_ms - _timer_Fade->getLeft(): _timer_Fade->getLeft();        
-            float fade_ratio = static_cast<float>(ms_left) / _fade_time_ms;
-            if(_inverse) fade_ratio = 1.0 - fade_ratio;
-            fade_ratio = etl::clamp<float>(fade_ratio, 0.0, 1.0);
-            int pwm = static_cast<int>(fade_ratio * (MAX_PWMRANGE - MIN_PWMRANGE)); // :TODO: Потом заменить на нормальные диапазоны
-        //    Serial.printf("fade %s: pwm=%d, fade_ratio = %g, ms_left=%d, _fade_time_ms=%d\n", _fade_direction ? "in" : "out", pwm, fade_ratio, ms_left, _fade_time_ms);            
-            set_pwm(pwm);
+            // uint32_t ms_left = _fade_direction ? _fade_time_ms - _timer_Fade->getLeft(): _timer_Fade->getLeft();        
+            // float fade_ratio = static_cast<float>(ms_left) / _fade_time_ms;
+            // if(_inverse) fade_ratio = 1.0 - fade_ratio;
+            // fade_ratio = etl::clamp<float>(fade_ratio, 0.0, 1.0);
+            // int pwm = static_cast<int>(fade_ratio * (MAX_PWMRANGE - MIN_PWMRANGE)); // :TODO: Потом заменить на нормальные диапазоны
+            // Serial.printf("fade %s: pwm=%d, fade_ratio = %g, ms_left=%d, _fade_time_ms=%d\n", _fade_direction ? "in" : "out", pwm, fade_ratio, ms_left, _fade_time_ms);            
+            // set_pwm(pwm);
+
+            if(_fade_brightness)
+            {
+                float brigntness = _fade_brightness->raw_to_value(_fade_time_ms - _timer_Fade->getLeft());
+                int pwm = brightness_to_pwm(brigntness);
+                set_pwm(pwm);     
+            }
         }
         else{
             // Остановить таймер
@@ -150,16 +157,46 @@ bool led::tick()
 
 void led::fade_in(uint32_t delay_ms)   // Правно погасить, используя ШИМ
 {
-    _fade_direction = true;
-    _fade_time_ms = delay_ms;
-    _timer_Fade = etl::make_unique<GTimer<millis>>(delay_ms, true, GTMode::Interval);
+    // _fade_direction = true;
+    // _fade_time_ms = delay_ms;
+    // _timer_Fade = etl::make_unique<GTimer<millis>>(delay_ms, true, GTMode::Interval);
+    etl::vector<fade_t> brigtness_points;
+    brigtness_points.push_back({0, 1.0});
+    brigtness_points.push_back({delay_ms, 0.0});
+    fade(brigtness_points);
 }
 
 void led::fade_out(uint32_t delay_ms)   // Правно зажечь, используя ШИМ
 {
-    _fade_direction = false;
-    _fade_time_ms = delay_ms;
-    _timer_Fade = etl::make_unique<GTimer<millis>>(delay_ms, true, GTMode::Interval);
+    // _fade_direction = false;
+    // _fade_time_ms = delay_ms;
+    // _timer_Fade = etl::make_unique<GTimer<millis>>(delay_ms, true, GTMode::Interval);
+    etl::vector<fade_t> brigtness_points;
+    brigtness_points.push_back({0, 0.0});
+    brigtness_points.push_back({delay_ms, 1.0});
+    fade(brigtness_points);
+}
+
+void led::fade(const etl::vector<fade_t>& brightness_ranges) // Плавные переходы по ключевым точкам
+{
+    _fade_brightness = etl::make_unique<etl::lookup <uint32_t, float, etl::vector<fade_t>>>(brightness_ranges);
+    if(_fade_brightness)
+    {
+        _fade_time_ms = _fade_brightness->max_raw() - _fade_brightness->min_raw();
+        _timer_Fade = etl::make_unique<GTimer<millis>>(_fade_time_ms, true, GTMode::Interval);
+    }
+}
+
+float led::pwm_to_brightness(int pwm)           // Вернуть нормированную яркость
+{
+    float brightness = static_cast<float>(pwm)/(MAX_PWMRANGE - MIN_PWMRANGE);
+    return etl::clamp<float>(brightness, 0.0, 1.0);
+}
+
+int led::brightness_to_pwm(float brigtness)  // Вернуть значение PWM 
+{
+    int pwm = static_cast<int>(brigtness * (MAX_PWMRANGE - MIN_PWMRANGE));
+    return etl::clamp<int>(pwm, MIN_PWMRANGE, MAX_PWMRANGE);
 }
 
 } //namespace etl
