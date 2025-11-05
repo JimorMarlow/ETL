@@ -162,7 +162,7 @@ void led::fade_in(uint32_t delay_ms)   // Правно погасить, исп�
     // _timer_Fade = etl::make_unique<GTimer<millis>>(delay_ms, true, GTMode::Interval);
     etl::vector<fade_t> brigtness_points;
     brigtness_points.push_back({0, 1.0});
-    brigtness_points.push_back({delay_ms, 0.0});
+    brigtness_points.push_back({int(delay_ms), 0.0});
     fade(brigtness_points);
 }
 
@@ -173,13 +173,13 @@ void led::fade_out(uint32_t delay_ms)   // Правно зажечь, испол
     // _timer_Fade = etl::make_unique<GTimer<millis>>(delay_ms, true, GTMode::Interval);
     etl::vector<fade_t> brigtness_points;
     brigtness_points.push_back({0, 0.0});
-    brigtness_points.push_back({delay_ms, 1.0});
+    brigtness_points.push_back({int(delay_ms), 1.0});
     fade(brigtness_points);
 }
 
 void led::fade(const etl::vector<fade_t>& brightness_ranges) // Плавные переходы по ключевым точкам
 {
-    _fade_brightness = etl::make_unique<etl::lookup <uint32_t, float, etl::vector<fade_t>>>(brightness_ranges);
+    _fade_brightness = etl::make_unique<etl::lookup <int, float, etl::vector<fade_t>>>(brightness_ranges);
     if(_fade_brightness)
     {
         _fade_time_ms = _fade_brightness->max_raw() - _fade_brightness->min_raw();

@@ -42,7 +42,7 @@ public:
     virtual void fade_in(uint32_t delay_ms);   // Правно погасить, используя ШИМ
     virtual void fade_out(uint32_t delay_ms);   // Правно зажечь, используя ШИМ
 
-    using fade_t = etl::lookup_t<uint32_t, float>;  // delay_ms, brightness [0..1] - map to range [MIN_PWMRANGE, MAX_PWMRANGE]
+    using fade_t = etl::lookup_t<int, float>;  // delay_ms, brightness [0..1] - map to range [MIN_PWMRANGE, MAX_PWMRANGE]
     virtual void fade(const etl::vector<fade_t>& brightness_ranges); // Плавные переходы по ключевым точкам
 
     virtual float pwm_to_brightness(int pwm);           // Вернуть нормированную яркость
@@ -62,7 +62,7 @@ protected:
     uint32_t   _fade_time_ms;  // Сколько времени зажигать/тушить
  //   bool       _fade_direction = true;// true - fade_in 
     etl::unique_ptr<GTimer<millis>> _timer_Fade;
-    etl::unique_ptr<etl::lookup <uint32_t, float, etl::vector<fade_t>>> _fade_brightness;    // Таблица интерполяции яркости для перехода
+    etl::unique_ptr<etl::lookup <int, float, etl::vector<fade_t>>> _fade_brightness;    // Таблица интерполяции яркости для перехода
 };
 
 } //namespace etl
