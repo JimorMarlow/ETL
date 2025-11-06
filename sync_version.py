@@ -23,4 +23,4 @@ sync_file('library.json', r'"version"\s*:\s*"[0-9.]+"', f'"version": "{version}"
 sync_file('library.properties', r'version=.*', f'version={version}')
 sync_file('package.json', r'"version"\s*:\s*"[0-9.]+"', f'"version": "{version}"')
 print(f"etl version updated to {version} in metadata files")
-exit(0)
+#exit(0)
