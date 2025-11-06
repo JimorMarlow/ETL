@@ -181,7 +181,7 @@ namespace espnow {
             
         #ifdef ESP8266 
             int result = esp_now_add_peer(const_cast<uint8_t*>(mac_addr), ESP_NOW_ROLE_COMBO, channel, NULL, 0);
-        #elif ESP32
+        #else //#elif ESP32
             esp_now_peer_info_t peerInfo;
             memset(&peerInfo, 0, sizeof(peerInfo));
             memcpy(peerInfo.peer_addr, mac_addr, 6);
@@ -214,7 +214,7 @@ namespace espnow {
             
         #ifdef ESP8266
             int result = esp_now_send(mac_addr.mac.data(), (uint8_t *)&msg, sizeof(msg));
-        #elif ESP32        
+        #else //#elif ESP32        
         //    esp_err_t result = esp_now_send(mac_addr.mac.data(), (uint8_t *)&msg, sizeof(msg));
         #endif
             //return result == ESP_OK;
