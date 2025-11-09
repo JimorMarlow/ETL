@@ -1,6 +1,6 @@
 {
   "name": "ETL",
-  "version": "0.9.3",
+  "version": "0.9.4",
   "description": "Embedded Template Library for Arduino - [another one] lightweight STL-like containers and algorithms for embedded systems",
   "keywords": "etl, stl, template, container, algorithm, embedded, arduino, esp8266, esp32",
   "repository": {

@@ -46,8 +46,13 @@ public:
     virtual void fade(const etl::vector<fade_t>& brightness_ranges); // Плавные переходы по ключевым точкам
 
     virtual float pwm_to_brightness(int pwm);           // Вернуть нормированную яркость
-    virtual int   brightness_to_pwm(float brigtness);   // Вернуть значение PWM 
-       
+    virtual int   brightness_to_pwm(float brightness);   // Вернуть значение PWM 
+    virtual float gamma() const {return _pwm_gamma; }    // логарифмическая яркость (1.0 - линейная)
+    virtual void  set_gamma(float gamma) {_pwm_gamma = gamma;}
+
+    virtual float get_brightness(); // Считать значение яркости по уровню pwn
+    virtual void  set_brightness(float brightness); // установить яркость [0.0..1.0]
+
 protected:
     int     _pin    = -1;
     bool    _state  = false;
@@ -58,6 +63,7 @@ protected:
     int         _pwm_channel = 0;
     uint32_t    _pwm_frequency  = DEFAULT_PWM_FREQUENCY;
     uint8_t     _pwm_resolution = DEFAULT_PWM_RESOLUTION;
+    float       _pwm_gamma = 2.2;   // логарифмическая яркость, 1.0 - линейная
 
     uint32_t   _fade_time_ms;  // Сколько времени зажигать/тушить
  //   bool       _fade_direction = true;// true - fade_in 

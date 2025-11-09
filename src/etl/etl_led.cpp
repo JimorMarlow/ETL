@@ -1,5 +1,6 @@
 #include "etl_led.h"
 #include "etl_utility.h"
+#include <math.h>
 
 namespace etl {
 
@@ -189,14 +190,28 @@ void led::fade(const etl::vector<fade_t>& brightness_ranges) // Плавные �
 
 float led::pwm_to_brightness(int pwm)           // Вернуть нормированную яркость
 {
-    float brightness = static_cast<float>(pwm)/(MAX_PWMRANGE - MIN_PWMRANGE);
-    return etl::clamp<float>(brightness, 0.0, 1.0);
+//    float brightness = static_cast<float>(pwm)/(MAX_PWMRANGE - MIN_PWMRANGE);
+//    return etl::clamp<float>(brightness, 0.0, 1.0);
+    // Обратное преобразование PWM к яркости
+    return pow((float)etl::clamp<int>(pwm, MIN_PWMRANGE, MAX_PWMRANGE) / float(MAX_PWMRANGE), 1.0 / gamma());
 }
 
-int led::brightness_to_pwm(float brigtness)  // Вернуть значение PWM 
+int led::brightness_to_pwm(float brightness)  // Вернуть значение PWM 
 {
-    int pwm = static_cast<int>(brigtness * (MAX_PWMRANGE - MIN_PWMRANGE));
-    return etl::clamp<int>(pwm, MIN_PWMRANGE, MAX_PWMRANGE);
+ //   int pwm = static_cast<int>(brigtness * (MAX_PWMRANGE - MIN_PWMRANGE));
+ //   return etl::clamp<int>(pwm, MIN_PWMRANGE, MAX_PWMRANGE);
+    // Преобразование яркости к PWM через степень gamma
+    return (int)(float(MAX_PWMRANGE) * pow(etl::clamp<float>(brightness, 0.0, 1.0), gamma()));
+}
+
+float led::get_brightness() // Считать значение яркости по уровню pwn
+{
+    return pwm_to_brightness(get_pwm());
+}
+
+void led::set_brightness(float brightness) // установить яркость [0.0..1.0]
+{
+    set_pwm(brightness_to_pwm(brightness));
 }
 
 } //namespace etl

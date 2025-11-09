@@ -37,6 +37,9 @@ https://github.com/JimorMarlow/etl
 
 ## Version Hystory | История версий
 
+### v0.9.4 (2025-11-09)
+- changed: LED logarifmic brightness 
+
 ### v0.9.2 (2025-11-05)
 - added: fade using lookup table [... in progress]
 
