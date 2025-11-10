@@ -37,6 +37,9 @@ https://github.com/JimorMarlow/etl
 
 ## Version Hystory | История версий
 
+### v0.9.5 (2025-11-10)
+- added: compare lookup tests
+
 ### v0.9.4 (2025-11-09)
 - changed: LED logarifmic brightness 
 

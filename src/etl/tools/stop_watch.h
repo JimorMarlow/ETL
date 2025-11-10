@@ -16,7 +16,7 @@ namespace tools {
             void start() { us_start = micros(); }
             uint32_t stop() { us_stop = micros(); samples.push_back(get_time()); return samples.back(); }
             uint32_t get_time() { return us_stop - us_start; }
-            uint32_t get_averate_time() {
+            uint32_t get_average_time() {
                 if(samples.empty()) return 0;
 
                 uint64_t us_total = 0; 

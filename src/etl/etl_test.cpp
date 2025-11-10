@@ -54,7 +54,7 @@ namespace unittest {
     //    profiler_average_filter(trace);
     //    profiler_lookup_table(trace);
     //    profiler_color_tds(trace);
-        profiler_lookup_ntc(trace);
+    //    profiler_lookup_ntc(trace);
 
         return true;
     }
@@ -638,7 +638,7 @@ namespace unittest {
 
         trace.println();
         trace.print("TIME;\tus;\t"); 
-        trace.println(stat_arr_mem.get_averate_time()); 
+        trace.println(stat_arr_mem.get_average_time()); 
     }
 
     void profiler_color_tds(Stream& trace)    
@@ -669,7 +669,7 @@ namespace unittest {
 
         trace.println();
         trace.print("TIME;\tus;\t"); 
-        trace.println(stat.get_averate_time()); 
+        trace.println(stat.get_average_time()); 
         // ESP32C3:         TIME;   us;     15
 
         /* Для проверки используются гугл таблицы
@@ -875,17 +875,17 @@ namespace unittest {
         // Статистика выполнения фильтров
         trace.println();
         trace.print("TIME;\tus;\t"); 
-        trace.print(stats.md3.get_averate_time()); // Tm3
+        trace.print(stats.md3.get_average_time()); // Tm3
         trace.print(";\t");
-        trace.print(stats.avg.get_averate_time()); // Tavg
+        trace.print(stats.avg.get_average_time()); // Tavg
         trace.print(";\t");
-        trace.print(stats.exp.get_averate_time() / 2); // Texp
+        trace.print(stats.exp.get_average_time() / 2); // Texp
         trace.print(";\tus;\t");
-        trace.print(stats.md5.get_averate_time()); // Hm5
+        trace.print(stats.md5.get_average_time()); // Hm5
         trace.print(";\t");
-        trace.print(stats.avg.get_averate_time()); // Havg
+        trace.print(stats.avg.get_average_time()); // Havg
         trace.print(";\t");
-        trace.print(stats.exp.get_averate_time() / 2); // Hexp; 
+        trace.print(stats.exp.get_average_time() / 2); // Hexp; 
         trace.print("\t");
         trace.println();
 
@@ -897,18 +897,21 @@ namespace unittest {
         // -------------------------------------------------------------------
     }
 
-    template<typename T, typename L>
-    uint32_t compare_lookup_time(const T& storage, const L& lookup_table, float step)
+    template<typename L>
+    uint32_t compare_lookup_time(const String& prefix, const L& lookup_table, float step)
     {
         etl::tools::stop_watch stat;   
-        for (float r = storage[0].raw; r >= storage[storage.size()-1].raw - 1.0; r-=step) 
+        for (float r = lookup_table.max_raw(); r >= lookup_table.min_raw() - 1.0; r-=step) 
         {
             stat.start();
             float t = lookup_table.raw_to_value(r);
             stat.stop();
+            Serial.printf("%s: %.3f;\t%0.2f;\t\n", prefix.c_str(), r, t);
             UNREFERENCED_PARAMETER(t);
         }
-        return stat.get_averate_time();
+        uint32_t agv_time = stat.get_average_time();
+        Serial.printf("%s: %d us\n", prefix.c_str(), agv_time);
+        return agv_time;
     }
 
     void profiler_lookup_ntc(Stream& trace)    // Для термодатчики ntc 3950 50K проверка перевода сопротивления в градусы цельсия
@@ -918,7 +921,8 @@ namespace unittest {
         etl::tools::stop_watch stat;
         // Выводим темпратуру по сопротивлению
         Serial.println("R;\tT;\t");
-        for (float r = pgm_3950_50K[0].raw; r >= pgm_3950_50K[pgm_3950_50K.size()-1].raw - 1.0; r-=0.3) 
+        //for (float r = pgm_3950_50K[0].raw; r >= pgm_3950_50K[pgm_3950_50K.size()-1].raw - 1.0; r-=0.3) 
+        for (float r = resistance_lookup.max_raw(); r >= resistance_lookup.min_raw() - 1.0; r-=0.3) 
         {
             stat.start();
             float t = resistance_lookup.raw_to_value(r);
@@ -928,7 +932,7 @@ namespace unittest {
 
         trace.println();
         trace.print("TIME;\tus;\t"); 
-        trace.println(stat.get_averate_time()); 
+        trace.println(stat.get_average_time()); 
         // ESP32C3:         TIME;   us;     15
 
         etl::vector<etl::lookup_t<float, float>> vec_3950_50K (pgm_3950_50K.size());
@@ -941,9 +945,16 @@ namespace unittest {
         auto resistance_lookup_vec = etl::vector_lookup<float, float>(vec_3950_50K, etl::lookup_mode::INTERPOLATE, etl::bounds_mode::EXTRAPOLATE);
 
         float step = 0.1;
-        trace.printf("%s;\t%d us;\t\n", "pgm_lookup", compare_lookup_time(pgm_3950_50K, resistance_lookup_pgm, step));  
-        trace.printf("%s;\t%d us;\t\n", "arr_lookup", compare_lookup_time(arr_3950_50K, resistance_lookup_arr, step));  
-        trace.printf("%s;\t%d us;\t\n", "vec_lookup", compare_lookup_time(vec_3950_50K, resistance_lookup_vec, step));  
+        uint32_t pgm_time = compare_lookup_time("pgm_lookup", resistance_lookup_pgm, step);
+        uint32_t arr_time = compare_lookup_time("arr_lookup", resistance_lookup_arr, step);
+        uint32_t vec_time = compare_lookup_time("vec_lookup", resistance_lookup_vec, step);
+        trace.printf("%s;\t%d us;\t\n", "pgm_lookup", pgm_time);  
+        trace.printf("%s;\t%d us;\t\n", "arr_lookup", arr_time);  
+        trace.printf("%s;\t%d us;\t\n", "vec_lookup", vec_time);  
+        // OUTPUT:
+        // pgm_lookup;     99 us;
+        // arr_lookup;     28 us;
+        // vec_lookup;     28 us;
     }
 
 }// namespace unittest

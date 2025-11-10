@@ -9,14 +9,13 @@ void setup() {
 
     /////////////////////////////////////////
     // etl - отладка функционала
+    // Обязательно добавь задержку
+    Serial.print("ETL version "); Serial.println(ETL_VERSION_STRING);
+    Serial.println("Running...");
     etl::unittest::test_all(Serial);
     /////////////////////////////////////////
 
 }
 
 void loop() {
-    // Обязательно добавь задержку
-    Serial.print("ETL version "); Serial.println(ETL_VERSION_STRING);
-    Serial.println("Running...");
-    delay(1000);    
 }
