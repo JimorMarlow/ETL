@@ -37,6 +37,9 @@ https://github.com/JimorMarlow/etl
 
 ## Version Hystory | История версий
 
+### v0.9.6 (2025-11-17)
+- added: [env:esp32-wroom-32u]
+
 ### v0.9.5 (2025-11-10)
 - added: compare lookup tests
 
