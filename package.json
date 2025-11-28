@@ -1,5 +1,9 @@
 {
   "name": "etl",
+<<<<<<< HEAD
   "version": "0.9.7",
+=======
+  "version": "0.9.6",
+>>>>>>> a0f12ab7fbbda7893bdcfa8b1356163f637b2e73
   "description": "ETL (embedded template library), Lightweight C++ template library optimized for embedded systems (Arduino, ESP8266/ESP32). Provides STL-like containers and algorithms with minimal memory footprint"
 }
