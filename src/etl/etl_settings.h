@@ -12,26 +12,105 @@ namespace etl
     {
     private:
         static bool _initialized;
+        static bool _mount_failed;
         
     public:
         static bool begin() {
+            if (_mount_failed) {
+                return false; // Уже пробовали и не получилось
+            }
+            
             if (!_initialized) {
                 Serial.print("Initializing LittleFS... ");
-                if (LittleFS.begin()) 
-                {
-                    _initialized = true;
-                    Serial.println("OK");
-                } 
-                else 
-                {
-                    Serial.println("FAILED");
+                
+                // Для ESP32-C3 часто нужно явно указать форматирование при первом запуске
+                if (!LittleFS.begin()) { // true = format если монтирование не удалось
+                    Serial.println("FAILED - trying with formatting...");
+                    
+                    // Пробуем с форматированием
+                    if (!format()) {
+                        Serial.println("FAILED even with formatting!");
+                        _mount_failed = true;
+                        return false;
+                    }
+                    else {
+                        // Проверяем, что файловая система действительно работает
+                        if (testFileSystem()) {
+                            Serial.println("LittleFS test: OK");
+                        } else {
+                            Serial.println("LittleFS test: FAILED");
+                            _initialized = false;
+                            _mount_failed = true;
+                            return false;
+                        }
+                    }
                 }
+                
+                _initialized = true;
+                Serial.println("OK");
             }
-            return isReady(); // Уже инициализирован
+            return _initialized;
         }
         
         static bool isReady() {
             return _initialized;
+        }
+        
+        static bool format() {
+            Serial.println("Formatting LittleFS...");
+            bool result = LittleFS.format();
+            _initialized = false;
+            _mount_failed = false;
+            if (result) {
+                Serial.println("Format: OK");
+                return begin(); // Пробуем снова после форматирования
+            } else {
+                Serial.println("Format: FAILED");
+                return false;
+            }
+        }
+        
+    private:
+        static bool testFileSystem() {
+            // Простая проверка работы файловой системы
+            const char* test_file = "/test.tmp";
+            
+            // Пробуем создать файл
+            File file = LittleFS.open(test_file, "w");
+            if (!file) {
+                Serial.println("  Cannot create test file");
+                return false;
+            }
+            
+            // Пробуем записать
+            if (file.write('T') != 1) {
+                Serial.println("  Cannot write to test file");
+                file.close();
+                LittleFS.remove(test_file);
+                return false;
+            }
+            file.close();
+            
+            // Пробуем прочитать
+            file = LittleFS.open(test_file, "r");
+            if (!file) {
+                Serial.println("  Cannot read test file");
+                LittleFS.remove(test_file);
+                return false;
+            }
+            
+            char data = file.read();
+            file.close();
+            
+            // Удаляем тестовый файл
+            LittleFS.remove(test_file);
+            
+            if (data != 'T') {
+                Serial.println("  Test file content mismatch");
+                return false;
+            }
+            
+            return true;
         }
     };
 
@@ -67,12 +146,12 @@ namespace etl
 
             bool init()    // Инициализировать все настройки и считать значения из памяти или записать по-умолчанию в первый раз
             {
-                if(!etl::little_fs::begin())
+                if(bool fs_available = etl::little_fs::begin(); !fs_available) 
                 {
-                    Serial.println("Error LittleFS.begin(). Setting can not be stored in memory");
+                    Serial.printf("Error: LittleFS not available for settings: %s\n", _path.c_str());
                     return false;
                 }
-
+                
                 Serial.printf("etl::setting::data init <%s> - ", _path.c_str());
 
                 // прочитать данные из файла в переменную

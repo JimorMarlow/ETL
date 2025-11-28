@@ -37,6 +37,9 @@ https://github.com/JimorMarlow/etl
 
 ## Version Hystory | История версий
 
+### v0.9.8 (2025-11-28)
+- little_fs begin with format 
+
 ### v0.9.7 (2025-11-28)
 - etl_settings for EEPROM/LittleFS settings store with pending write (to reduce write count)
 
