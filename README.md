@@ -37,6 +37,9 @@ https://github.com/JimorMarlow/etl
 
 ## Version Hystory | История версий
 
+### v0.9.7 (2025-11-28)
+- etl_settings for EEPROM/LittleFS settings store with pending write (to reduce write count)
+
 ### v0.9.6 (2025-11-17)
 - added: [env:esp32-wroom-32u]
 

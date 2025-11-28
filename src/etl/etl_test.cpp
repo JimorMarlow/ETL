@@ -17,6 +17,7 @@
 #include "tools/stop_watch.h"
 #include "tools/strings.h"
 #include "etl_espnow.h"
+#include "etl_settings.h"
 
 namespace etl {
 namespace unittest { 
@@ -42,6 +43,7 @@ namespace unittest {
         test_result(trace, "test_color_lookup", test_color_lookup());
         test_result(trace, "test_color_spectrum", test_color_spectrum());
         test_result(trace, "test_algorythm", test_algorythm());
+        test_result(trace, "test_settings", test_settings());
 
         test_result(trace, "test_empty", test_empty());
         
@@ -955,6 +957,68 @@ namespace unittest {
         // pgm_lookup;     99 us;
         // arr_lookup;     28 us;
         // vec_lookup;     28 us;
+    }
+
+    ///////////////////////////////////////////////////////
+    // Проверка записи данных в EEPROM
+    namespace settings
+    {
+        const String data_path = "/data.cfg";
+        const uint16_t data_update_delay = 300;  // 300ms
+        struct data_t
+        {
+            uint8_t version = 10;           
+            bool    state      = false;    // Велючен свет или нет
+            float   brightness = 1.0;      // Целевой уровень яркости
+            char    topic[20] = "data/state";  // Строковой элемент
+            int     percent = 90;           // Целое для отладки
+            etl::sensor::data::th_t weather = {36.6, 50.0};  // структура
+            
+            void trace() {
+                Serial.println("=== data_t settings ===");
+                Serial.printf("version = %d\n", version);
+                Serial.printf("state = %s\n", state ? "ON" : "OFF");
+                Serial.printf("brightness = %g\n", brightness);
+                Serial.printf("topic = %s\n", topic);
+                Serial.printf("temperature = %g, humidity = %g\n", weather.temperature, weather.humidity);
+                Serial.println("========================");
+            }            
+        };
+    }// settings
+
+    String test_settings()
+    {
+        settings::data_t v1;
+        settings::data_t v2;
+
+        // Запись
+        {
+            etl::settings::data<settings::data_t> data1 (settings::data_path, settings::data_update_delay);   // Сохранение настроек в постоянной памяти
+            v1 = data1.get();
+            v1.version = 5;
+            v1.state = !v1.state;
+            v1.brightness = random(0,100) / 100;   
+            data1.set(v1);
+            auto t1 = millis();
+            while(millis() - t1 < settings::data_update_delay + 100)
+            {
+                data1.tick();   // эмуляция loop(), после этого все данные должны сохраниться в памяти
+            }
+        }
+
+        // Чтение
+        {
+            etl::settings::data<settings::data_t> data2 (settings::data_path, settings::data_update_delay);   // Сохранение настроек в постоянной памяти
+            v2 = data2.get();
+        }
+        TEST_EQUAL(v1.version, v2.version, "settings version");
+        TEST_EQUAL(v1.state, v2.state, "settings state");
+        TEST_EQUAL(math::equals(v1.brightness, v2.brightness), true, "settings brightness");
+        TEST_EQUAL(String(v1.topic), String(v2.topic), "settings topic");
+        TEST_EQUAL(v1.weather.temperature, v2.weather.temperature, "settings weather.temperature");
+        TEST_EQUAL(v1.weather.humidity, v2.weather.humidity, "settings weather.humidity");
+
+        return "";  // no errors
     }
 
 }// namespace unittest

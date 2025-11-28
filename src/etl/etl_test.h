@@ -22,6 +22,7 @@ namespace unittest {
     String test_color_lookup();
     String test_color_spectrum();
     String test_algorythm();
+    String test_settings();
     
     // проверка алгоритмов 
     void profiler_average_filter(Stream& trace);
