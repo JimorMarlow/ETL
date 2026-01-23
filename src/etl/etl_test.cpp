@@ -17,6 +17,7 @@
 #include "tools/stop_watch.h"
 #include "tools/strings.h"
 #include "etl_espnow.h"
+#include "etl_littlefs.h"
 #include "etl_settings.h"
 
 namespace etl {
@@ -43,6 +44,7 @@ namespace unittest {
         test_result(trace, "test_color_lookup", test_color_lookup());
         test_result(trace, "test_color_spectrum", test_color_spectrum());
         test_result(trace, "test_algorythm", test_algorythm());
+        test_result(trace, "test_littlefs", test_littlefs());
         test_result(trace, "test_settings", test_settings());
 
         test_result(trace, "test_empty", test_empty());
@@ -961,6 +963,18 @@ namespace unittest {
 
     ///////////////////////////////////////////////////////
     // Проверка записи данных в EEPROM
+
+    String test_littlefs()
+    {
+        TEST_EQUAL(etl::little_fs::begin(etl::little_fs::begin_mode_t::kSilentMode), true, "etl::little_fs::begin()");
+
+        const char* path = "/test.txt";
+        TEST_EQUAL(LittleFS.open(path, FILE_WRITE), true, "Failed to create test file");
+        TEST_EQUAL(LittleFS.open(path, FILE_READ), true, "Failed to read test file");
+    
+        return "";  // no errors
+    }
+
     namespace settings
     {
         const String data_path = "/data.cfg";
@@ -985,11 +999,13 @@ namespace unittest {
             }            
         };
     }// settings
-
+    
     String test_settings()
     {
         settings::data_t v1;
         settings::data_t v2;
+
+        TEST_EQUAL(etl::little_fs::begin(), true, "etl::little_fs::begin()");
 
         // Запись
         {

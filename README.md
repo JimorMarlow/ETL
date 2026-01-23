@@ -32,10 +32,14 @@ https://github.com/JimorMarlow/etl
 ## Supported Platforms
 - ESP8266 (tested boards: Node MCU, Wemos D1 mini)
 - ESP32 (tested boards: ESP32-C3 ...)
+- esp32-32u (tested boards: esp32-wroom-32u ...)
 
 ---
 
 ## Version Hystory | История версий
+
+### v0.9.9 (2026-01-23)
+- little_fs starte work, testing
 
 ### v0.9.8 (2025-11-28)
 - little_fs begin with format 
