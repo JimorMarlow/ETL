@@ -38,6 +38,9 @@ https://github.com/JimorMarlow/etl
 
 ## Version Hystory | История версий
 
+### v0.9.10 (2026-01-25)
+- little_fs ESP8266 systax quick fix
+
 ### v0.9.9 (2026-01-23)
 - little_fs starte work, testing
 

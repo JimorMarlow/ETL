@@ -969,8 +969,13 @@ namespace unittest {
         TEST_EQUAL(etl::little_fs::begin(etl::little_fs::begin_mode_t::kSilentMode), true, "etl::little_fs::begin()");
 
         const char* path = "/test.txt";
+#ifdef ESP32
         TEST_EQUAL(LittleFS.open(path, FILE_WRITE), true, "Failed to create test file");
         TEST_EQUAL(LittleFS.open(path, FILE_READ), true, "Failed to read test file");
+#elif ESP8266
+        TEST_EQUAL(LittleFS.open(path, "w"), true, "Failed to create test file");
+        TEST_EQUAL(LittleFS.open(path, "r"), true, "Failed to read test file");
+#endif//ESP32-ESP8266 
     
         return "";  // no errors
     }

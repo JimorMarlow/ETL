@@ -11,7 +11,11 @@ namespace etl
         if(flag == begin_mode_t::kShowInfo) Serial.println("Initializing LittleFS...");
         // Пробуем несколько способов
         // Способ 1: Без форматирования
+#ifdef ESP32
         if (LittleFS.begin(false)) 
+#elif ESP8266
+        if (LittleFS.begin()) 
+#endif//ESP32-ESP8266 
         {
             if(flag == begin_mode_t::kShowInfo) Serial.println("✓ LittleFS mounted successfully");
             _initialized = true;
@@ -21,7 +25,11 @@ namespace etl
             if(flag == begin_mode_t::kShowInfo) Serial.println("✗ LittleFS mount failed, trying with formatting...");
             
             // Способ 2: С форматированием
+#ifdef ESP32
             if (LittleFS.begin(true)) 
+#elif ESP8266
+            if (LittleFS.begin()) 
+#endif//ESP32-ESP8266 
             {
                 if(flag == begin_mode_t::kShowInfo) Serial.println("✓ LittleFS mounted after formatting");
                 _initialized = true;
@@ -35,7 +43,11 @@ namespace etl
                 if (LittleFS.format()) 
                 {
                     if(flag == begin_mode_t::kShowInfo) Serial.println("✓ Manual format successful");
+#ifdef ESP32
                     if (LittleFS.begin(false)) 
+#elif ESP8266
+                    if (LittleFS.begin()) 
+#endif//ESP32-ESP8266 
                     {
                         if(flag == begin_mode_t::kShowInfo) Serial.println("✓ LittleFS mounted after manual format");
                         _initialized = true;
@@ -57,6 +69,7 @@ namespace etl
         // Выводим информацию о системе
         Serial.println("========================================");
         Serial.println("LittleFS info");
+#ifdef ESP32
         Serial.printf("\tChip: %s\n", ESP.getChipModel());
         Serial.printf("\tCores: %d\n", ESP.getChipCores());
         Serial.printf("\tFlash size: %u bytes\n", ESP.getFlashChipSize());
@@ -87,5 +100,8 @@ namespace etl
             Serial.printf("\tUsed space:  %u bytes\n", used);
             Serial.printf("\tFree space:  %u bytes\n", total - used);
         }
+#elif ESP8266
+            Serial.println("TODO...");
+#endif//ESP32-ESP8266 
     }
 }
