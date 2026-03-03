@@ -105,4 +105,19 @@ constexpr const T& clamp(const T& value, const T& low, const T& high, Compare co
     return comp(value, low) ? low : comp(high, value) ? high : value;
 }
 
+// Диапазоны значений для справочников и т.д.
+template <typename T>
+struct range_t
+{
+    T low;
+    T high;
+
+    T clamp(const T& value) const { return etl::clamp(value, low, high); }
+    bool in_range(const T& value) const { return low <= value && value <= high; }
+};
+
+using Range = range_t<int>;
+using Rangef = range_t<float>;
+using Rangefd = range_t<double>;
+
 }// namespace etl
