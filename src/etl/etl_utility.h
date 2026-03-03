@@ -109,9 +109,11 @@ constexpr const T& clamp(const T& value, const T& low, const T& high, Compare co
 template <typename T>
 struct range_t
 {
-    T low;
-    T high;
+    T low = T(0);
+    T high = T(0);
 
+    range_t() = default;
+    range_t(const T& low_value, const T& high_value) : low(low_value), high(high_value) {}
     T clamp(const T& value) const { return etl::clamp(value, low, high); }
     bool in_range(const T& value) const { return low <= value && value <= high; }
 };
