@@ -1043,6 +1043,7 @@ namespace unittest {
         // Запись
         {
             etl::settings::data<settings::data_t> data1 (settings::data_path, settings::data_update_delay);   // Сохранение настроек в постоянной памяти
+            TEST_EQUAL(data1.init(), true, "data1.init");
             v1 = data1.get();
             v1.version = 5;
             v1.state = !v1.state;
@@ -1058,6 +1059,7 @@ namespace unittest {
         // Чтение
         {
             etl::settings::data<settings::data_t> data2 (settings::data_path, settings::data_update_delay);   // Сохранение настроек в постоянной памяти
+            TEST_EQUAL(data2.init(), true, "data2.init");
             v2 = data2.get();
         }
         TEST_EQUAL(v1.version, v2.version, "settings version");
