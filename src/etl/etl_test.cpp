@@ -69,10 +69,12 @@ namespace unittest {
     
     void test_result(Stream& trace, const String& title, const String& result)
     {
-        mem_free_before = mem_free;     mem_free = ESP.getFreeHeap();   // контроль памяти 
+        mem_free_before = mem_free;     mem_free = ESP.getFreeHeap();   // контроль памяти
         int diff = int(mem_free_before) - int(mem_free);
-        trace.print("MEMORY: "); trace.print(mem_free); trace.print(" diff = "); trace.print(diff); trace.print("\t| ");
-        trace.print(title + " - ");  trace.println(result.isEmpty() ? "OK" : "FAILED: " + result);
+        
+        // Форматируем вывод с выравниванием
+        trace.printf("MEMORY: %d diff = %4d | %s - %s\n", 
+                     mem_free, diff, title.c_str(), result.isEmpty() ? "OK" : ("FAILED: " + result).c_str());
     }
 
     String test_empty()
