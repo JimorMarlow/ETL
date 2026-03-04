@@ -56,7 +56,7 @@ namespace etl
             }
         }
 
-        if(is_ready())
+        if(is_ready() && flag == begin_mode_t::kShowInfo)
         {
             show_partition_info();  // отладочная информация
         }

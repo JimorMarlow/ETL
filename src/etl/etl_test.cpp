@@ -969,14 +969,40 @@ namespace unittest {
         TEST_EQUAL(etl::little_fs::begin(etl::little_fs::begin_mode_t::kSilentMode), true, "etl::little_fs::begin()");
 
         const char* path = "/test.txt";
+
+        // Проверяем существование файла и удаляем если есть
 #ifdef ESP32
-        TEST_EQUAL(LittleFS.open(path, FILE_WRITE), true, "Failed to create test file");
-        TEST_EQUAL(LittleFS.open(path, FILE_READ), true, "Failed to read test file");
+        if (LittleFS.exists(path)) {
+            TEST_EQUAL(LittleFS.remove(path), true, "Failed to delete existing test file");
+        }
 #elif ESP8266
-        TEST_EQUAL(LittleFS.open(path, "w"), true, "Failed to create test file");
-        TEST_EQUAL(LittleFS.open(path, "r"), true, "Failed to read test file");
-#endif//ESP32-ESP8266 
-    
+        if (LittleFS.exists(path)) {
+            TEST_EQUAL(LittleFS.remove(path), true, "Failed to delete existing test file");
+        }
+#endif//ESP32-ESP8266
+
+        // Создаём тестовый файл
+#ifdef ESP32
+        File write_file = LittleFS.open(path, FILE_WRITE);
+        TEST_EQUAL(write_file, true, "Failed to create test file");
+        write_file.close();
+#elif ESP8266
+        File write_file = LittleFS.open(path, "w");
+        TEST_EQUAL(write_file, true, "Failed to create test file");
+        write_file.close();
+#endif//ESP32-ESP8266
+
+        // Проверяем чтение файла
+#ifdef ESP32
+        File read_file = LittleFS.open(path, FILE_READ);
+        TEST_EQUAL(read_file, true, "Failed to read test file");
+        read_file.close();
+#elif ESP8266
+        File read_file = LittleFS.open(path, "r");
+        TEST_EQUAL(read_file, true, "Failed to read test file");
+        read_file.close();
+#endif//ESP32-ESP8266
+
         return "";  // no errors
     }
 
