@@ -57,10 +57,10 @@ namespace etl
 
         public:
             // Путь к настройкам для этой структуры и интервал записи после обновленя в мс
-            data(const String& path, uint16_t update_timeout = 5000)
+            data(const String& path, uint16_t update_timeout = 5000, const T& default_data = T() )
             : _path(path)
             , _fd (&LittleFS, path.c_str(), 'B', &_data, sizeof(_data), update_timeout)
-            , _data()
+            , _data(default_data)
             {}
             virtual ~data() = default;
 

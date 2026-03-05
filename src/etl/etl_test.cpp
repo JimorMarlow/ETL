@@ -1070,6 +1070,7 @@ namespace unittest {
     {
         settings::data_t v1;
         settings::data_t v2;
+        settings::data_t v3;
 
         TEST_EQUAL(etl::little_fs::begin(), true, "etl::little_fs::begin()");
 
@@ -1105,6 +1106,18 @@ namespace unittest {
         TEST_EQUAL(String(v1.topic), String(v2.topic), "settings topic");
         TEST_EQUAL(v1.weather.temperature, v2.weather.temperature, "settings weather.temperature");
         TEST_EQUAL(v1.weather.humidity, v2.weather.humidity, "settings weather.humidity");
+
+        // Значение по умолчанию
+        etl::settings::data<settings::data_t> data3 (settings::data_path, settings::data_update_delay, v2);   // Установка значений по умолчанию
+        // не вызываем data3.init(), проверяем, что до считывания тут значения по умолчанию
+        v3 = data3.get();
+
+        TEST_EQUAL(v3.version, v2.version, "default settings version");
+        TEST_EQUAL(v3.state, v2.state, "default settings state");
+        TEST_EQUAL(math::equals(v3.brightness, v2.brightness), true, "default settings brightness");
+        TEST_EQUAL(String(v3.topic), String(v2.topic), "default settings topic");
+        TEST_EQUAL(v3.weather.temperature, v2.weather.temperature, "default settings weather.temperature");
+        TEST_EQUAL(v3.weather.humidity, v2.weather.humidity, "default settings weather.humidity");
 
         return "";  // no errors
     }
