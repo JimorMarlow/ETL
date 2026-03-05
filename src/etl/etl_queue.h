@@ -167,7 +167,7 @@ public:
         if (index < count) {
             value = data[(front_index + index) % data.capacity()];
         }
-        return etl::move(value);
+        return value;  // RVO оптимизация
     }
 
     // Итератор для range-based for loop
