@@ -71,9 +71,9 @@ namespace unittest {
     {
         mem_free_before = mem_free;     mem_free = ESP.getFreeHeap();   // контроль памяти
         int diff = int(mem_free_before) - int(mem_free);
-        
+
         // Форматируем вывод с выравниванием
-        trace.printf("MEMORY: %d diff = %4d | %s - %s\n", 
+        trace.printf("MEMORY: %5d diff = %5d | %-25s - %s\n",
                      mem_free, diff, title.c_str(), result.isEmpty() ? "OK" : ("FAILED: " + result).c_str());
     }
 
@@ -173,7 +173,7 @@ namespace unittest {
 
     String test_queue()
     {
-        etl::queue<int, 5> avgInt5; // Усреднение 5 значений
+        etl::queue<int> avgInt5(5); // Усреднение 5 значений
         TEST_EQUAL(avgInt5.empty(), true, "avgInt5.empty()");
         TEST_EQUAL(avgInt5.capacity(), 5, "avgInt5.capacity");
         for(int i = 1; i <= 5; ++i) avgInt5.push(i);
@@ -185,7 +185,7 @@ namespace unittest {
         TEST_EQUAL(avgInt5.at(3), 4, "avgInt5.at(3)");
         TEST_EQUAL(avgInt5.at(4), 5, "avgInt5.at(4)");
 
-        int sum5 = 0; 
+        int sum5 = 0;
         for(auto value : avgInt5) sum5+= value;
         TEST_EQUAL(sum5, 15, "sum5 == 15");
         int avg5 = sum5 / avgInt5.size();
@@ -208,7 +208,7 @@ namespace unittest {
         TEST_EQUAL(avgInt5.front(), avgInt5.back(), "2: avgInt5.front() == back()");
         avgInt5.push(31);
         TEST_EQUAL(avgInt5[0], 42, "2: avgInt5.[0] 42)");
-        TEST_EQUAL(avgInt5[1], 31, "2: avgInt5.[1] 31)");        
+        TEST_EQUAL(avgInt5[1], 31, "2: avgInt5.[1] 31)");
         TEST_EQUAL(avgInt5.front(), 42, "2: avgInt5.front() 42");
         TEST_EQUAL(avgInt5.back(), 31, "2: avgInt5.back() 31");
         avgInt5.push(20);
@@ -228,6 +228,39 @@ namespace unittest {
         TEST_EQUAL(avgInt5.empty(), true, "4: avgInt5.empty()");
         auto f4 = avgInt5.pop_front();
         TEST_EQUAL(f4.has_value(), false, "4: f4 empty has_value");
+
+        // Тест конструктора по умолчанию
+        etl::queue<int> default_queue;
+        TEST_EQUAL(default_queue.capacity(), 16, "default_queue.capacity() == 16");
+        TEST_EQUAL(default_queue.empty(), true, "default_queue.empty()");
+
+        // Тест reserve()
+        etl::queue<int> reserve_queue(3);
+        reserve_queue.push(1);
+        reserve_queue.push(2);
+        reserve_queue.push(3);
+        TEST_EQUAL(reserve_queue.size(), 3, "reserve_queue.size() == 3");
+        TEST_EQUAL(reserve_queue.capacity(), 3, "reserve_queue.capacity() == 3");
+        
+        TEST_EQUAL(reserve_queue.reserve(5), true, "reserve(5) success");
+        TEST_EQUAL(reserve_queue.capacity(), 5, "reserve_queue.capacity() == 5 after reserve");
+        TEST_EQUAL(reserve_queue.size(), 3, "reserve_queue.size() == 3 after reserve");
+        TEST_EQUAL(reserve_queue[0], 1, "reserve_queue[0] == 1 after reserve");
+        TEST_EQUAL(reserve_queue[1], 2, "reserve_queue[1] == 2 after reserve");
+        TEST_EQUAL(reserve_queue[2], 3, "reserve_queue[2] == 3 after reserve");
+        
+        // Добавляем элементы после reserve
+        TEST_EQUAL(reserve_queue.push(4), true, "push(4) after reserve");
+        TEST_EQUAL(reserve_queue.push(5), true, "push(5) after reserve");
+        TEST_EQUAL(reserve_queue.full(), true, "full() after reserve");
+        
+        // reserve() не может уменьшить ёмкость меньше количества элементов
+        TEST_EQUAL(reserve_queue.reserve(2), false, "reserve(2) fails when size > 2");
+        
+        // reserve() на пустой очереди
+        etl::queue<int> empty_queue(2);
+        TEST_EQUAL(empty_queue.reserve(10), true, "reserve(10) on empty queue");
+        TEST_EQUAL(empty_queue.capacity(), 10, "empty_queue.capacity() == 10");
 
         return "";
     }

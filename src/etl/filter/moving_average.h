@@ -12,10 +12,11 @@ template<typename T, size_t MAX_SIZE = 5>
 class moving_average : public filter::base<T>
 {
 private:
-    etl::queue<T, MAX_SIZE> _values;
-    T _summ = T{0};//static_cast<T>{0};  
+    etl::queue<T> _values;
+    T _summ = T{0};//static_cast<T>{0};
 
 public:
+    moving_average() : _values(MAX_SIZE) {}
     virtual T update(const T& value) override
     {
         if(_values.full()) {

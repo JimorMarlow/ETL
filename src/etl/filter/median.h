@@ -16,10 +16,10 @@ namespace filter
     class median3 : public base<T>
     {
     private:
-        etl::queue<T, 3> _values;
-        
+        etl::queue<T> _values;
+
     public:
-        median3() = default;
+        median3() : _values(3) {}
 
         static T fast_median(T a, T b, T c) // специально работаю с копиями объектов для упрощения перестановок
         {
@@ -58,10 +58,10 @@ namespace filter
     class median5 : public base<T>
     {
     private:
-        etl::queue<T, 5> _values;
-        
+        etl::queue<T> _values;
+
     public:
-        median5() = default;
+        median5() : _values(5) {}
 
         static T fast_median(T a, T b, T c, T d, T e) // специально работаю с копиями объектов для упрощения перестановок
         {
