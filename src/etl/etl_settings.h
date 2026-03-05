@@ -20,60 +20,91 @@ namespace etl
         template<typename T>
         constexpr bool has_trace_v = has_trace<T>::value;
 
+        // Режимы трассировки
+        enum class trace_mode_t : uint8_t
+        {
+            SILENT = 0,    // Тихий режим - никаких сообщений
+            ERRORS = 1,    // Только ошибки
+            VERBOSE = 2    // Все сообщения
+        };
+
         // Управление всеми настройками
         template<typename T>
-        class data 
+        class data
         {
-            String   _path; // Путь к файлу для сохранения настроек            
+            static inline trace_mode_t _trace_mode = trace_mode_t::SILENT;  // Режим трассировки
+
+            String   _path; // Путь к файлу для сохранения настроек
             FileData _fd;   // Управление загрузкой данных в файловую система
             T        _data; // структура данных
-            
+
 
         public:
             // Путь к настройкам для этой структуры и интервал записи после обновленя в мс
             data(const String& path, uint16_t update_timeout = 5000)
             : _path(path)
-            , _fd (&LittleFS, path.c_str(), 'B', &_data, sizeof(_data), update_timeout) 
+            , _fd (&LittleFS, path.c_str(), 'B', &_data, sizeof(_data), update_timeout)
             , _data()
             {}
             virtual ~data() = default;
 
+            // Установить режим трассировки
+            static void set_trace_mode(trace_mode_t mode) { _trace_mode = mode; }
+            // Получить режим трассировки
+            static trace_mode_t get_trace_mode() { return _trace_mode; }
+
             bool init()    // Инициализировать все настройки и считать значения из памяти или записать по-умолчанию в первый раз
             {
-                Serial.printf("etl::setting::data init for <%s>:\n", _path.c_str());
-                if(bool fs_available = etl::little_fs::begin(); !fs_available) 
+                if (_trace_mode >= trace_mode_t::VERBOSE) {
+                    Serial.printf("etl::setting::data init for <%s>:\n", _path.c_str());
+                }
+                if(bool fs_available = etl::little_fs::begin(); !fs_available)
                 {
-                    Serial.printf("Error: LittleFS not available for settings: %s\n", _path.c_str());
+                    if (_trace_mode >= trace_mode_t::ERRORS) {
+                        Serial.printf("Error: LittleFS not available for settings: %s\n", _path.c_str());
+                    }
                     return false;
                 }
-                
-                Serial.printf("etl::setting::data read <%s> - ", _path.c_str());
+
+                if (_trace_mode >= trace_mode_t::VERBOSE) {
+                    Serial.printf("etl::setting::data read <%s> - ", _path.c_str());
+                }
 
                 // прочитать данные из файла в переменную
                 // при первом запуске в файл запишутся данные из структуры
                 FDstat_t stat = _fd.read();
 
-                switch (stat) {
-                    case FD_FS_ERR: Serial.println("FS Error");
-                        break;
-                    case FD_FILE_ERR: Serial.println("FS File Open Error");
-                        break;
-                    case FD_WRITE: Serial.println("Data Write");
-                        break;
-                    case FD_ADD: Serial.println("Data Add");
-                        break;
-                    case FD_READ: Serial.println("Data Read");
-                        break;
-                    default:
-                        Serial.println();
-                        break;
+                if (_trace_mode >= trace_mode_t::VERBOSE) {
+                    switch (stat) {
+                        case FD_FS_ERR: Serial.println("FS Error");
+                            break;
+                        case FD_FILE_ERR: Serial.println("FS File Open Error");
+                            break;
+                        case FD_WRITE: Serial.println("Data Write");
+                            break;
+                        case FD_ADD: Serial.println("Data Add");
+                            break;
+                        case FD_READ: Serial.println("Data Read");
+                            break;
+                        default:
+                            Serial.println();
+                            break;
+                    }
+                } else if (_trace_mode >= trace_mode_t::ERRORS) {
+                    if (stat == FD_FS_ERR) {
+                        Serial.println("FS Error");
+                    } else if (stat == FD_FILE_ERR) {
+                        Serial.println("FS File Open Error");
+                    }
                 }
 
                 // Вызываем trace() если он есть у структуры T
                 if constexpr (has_trace_v<T>) {
-                    _data.trace();
+                    if (_trace_mode >= trace_mode_t::VERBOSE) {
+                        _data.trace();
+                    }
                 }
-                    
+
                 return true;
             }
 
