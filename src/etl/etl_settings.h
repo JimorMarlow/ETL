@@ -1,5 +1,15 @@
 #pragma once
 // Настройки проекта с сохранение в EEPROM или операционную систему
+// Для уменьшения циклов записи на флеш память используется отложенная запись на величину 
+// update_timeout. 
+// - В рабочем цикле нужно обязательно вызывать tick() - если в течении таймаута не было изменения данных,
+// они запишутся в файловую систему. Для оптимизации записи использутеся библиотека 
+// gyverlibs/FileData@^1.0.3 от Alex Gyver
+// - ВНИМАНИЕ: перед первым чтением данных обязательно вызвать init(), можно в самом начале setup() 
+// - Если нужно сохранить данные без задержки (например, перед перезагрузкой) - вызывать save()
+// Примеры использования:
+// - в этом файле внизу
+// - src\etl\etl_test.cpp test_settings()
 
 #include <Arduino.h>
 #include <FileData.h>
@@ -170,6 +180,7 @@ class control
     etl::settings::data<settings::kitchen_light_t> _settings;   // Сохранение настроек в постоянной памяти
 
     public:
+    bool init() { return _settings.init(); }
     void tick();    // call in main loop() for delayed update
 }
 
@@ -192,6 +203,14 @@ void control::set_brightness(float brightness_value)
     auto data = _settings.get();
     data.brightness = etl::clamp<float>(brightness_value, 0.0, 1.0);
     _settings.set(data);
+}
+
+// Settings
+control light;  // глобальный экземпляр настроек
+
+void setup() 
+{
+    light.init();
 }
 
 // main.cpp

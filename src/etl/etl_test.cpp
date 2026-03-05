@@ -1010,7 +1010,7 @@ namespace unittest {
 
     namespace settings
     {
-        const String data_path = "/data.cfg";
+        const String data_path = "/settings/data.cfg";
         const uint16_t data_update_delay = 300;  // 300ms
         struct data_t
         {
