@@ -1040,6 +1040,10 @@ namespace unittest {
 
         TEST_EQUAL(etl::little_fs::begin(), true, "etl::little_fs::begin()");
 
+        // Создание директории для файла настроек
+        TEST_EQUAL(etl::little_fs::create_dir(settings::data_path), true, "etl::little_fs::create_dir()");
+        TEST_EQUAL(etl::little_fs::is_dir_exist("/settings"), true, "etl::little_fs::is_dir_exist()");
+
         // Запись
         {
             etl::settings::data<settings::data_t> data1 (settings::data_path, settings::data_update_delay);   // Сохранение настроек в постоянной памяти
@@ -1047,7 +1051,7 @@ namespace unittest {
             v1 = data1.get();
             v1.version = 5;
             v1.state = !v1.state;
-            v1.brightness = random(0,100) / 100;   
+            v1.brightness = random(0,100) / 100;
             data1.set(v1);
             auto t1 = millis();
             while(millis() - t1 < settings::data_update_delay + 100)

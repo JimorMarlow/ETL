@@ -64,7 +64,7 @@ namespace etl
         return is_ready();
     }
 
-    void little_fs::show_partition_info() 
+    void little_fs::show_partition_info()
     {
         // Выводим информацию о системе
         Serial.println("========================================");
@@ -78,14 +78,14 @@ namespace etl
         if(little_fs::begin(begin_mode_t::kShowInfo))
         {
             Serial.println("\nPartition information:");
-            
-            esp_partition_iterator_t it = esp_partition_find(ESP_PARTITION_TYPE_ANY, 
-                                                            ESP_PARTITION_SUBTYPE_ANY, 
+
+            esp_partition_iterator_t it = esp_partition_find(ESP_PARTITION_TYPE_ANY,
+                                                            ESP_PARTITION_SUBTYPE_ANY,
                                                             NULL);
             while (it != NULL) {
                 const esp_partition_t* p = esp_partition_get(it);
                 Serial.printf("  %-12s: 0x%06X - 0x%06X (size: 0x%06X = %u bytes)\n",
-                            p->label, p->address, p->address + p->size, 
+                            p->label, p->address, p->address + p->size,
                             p->size, p->size);
                 it = esp_partition_next(it);
             }
@@ -94,7 +94,7 @@ namespace etl
             // Получаем информацию о файловой системе
             size_t total = LittleFS.totalBytes();
             size_t used = LittleFS.usedBytes();
-            
+
             Serial.println("\nLittleFS Info:");
             Serial.printf("\tTotal space: %u bytes\n", total);
             Serial.printf("\tUsed space:  %u bytes\n", used);
@@ -102,6 +102,58 @@ namespace etl
         }
 #elif ESP8266
             Serial.println("TODO...");
-#endif//ESP32-ESP8266 
+#endif//ESP32-ESP8266
+    }
+
+    bool little_fs::is_dir_exist(const String& path)
+    {
+        if (!LittleFS.exists(path)) {
+            return false;
+        }
+        File dir = LittleFS.open(path, "r");
+        if (!dir) {
+            return false;
+        }
+        bool is_directory = dir.isDirectory();
+        dir.close();
+        return is_directory;
+    }
+
+    bool little_fs::create_dir(const String& path)
+    {
+        // Извлекаем путь к директории из полного пути к файлу
+        String dir_path = path;
+        int last_slash = dir_path.lastIndexOf('/');
+        if (last_slash <= 0) {
+            // Корневая директория или неверный путь
+            return true;
+        }
+        dir_path = dir_path.substring(0, last_slash);
+
+        // Проверяем, существует ли уже директория
+        if (is_dir_exist(dir_path)) {
+            return true;
+        }
+
+        // Создаем все промежуточные директории
+        String current_path = "";
+        size_t start_pos = (dir_path.charAt(0) == '/') ? 1 : 0;
+        
+        for (size_t i = start_pos; i <= dir_path.length(); i++) {
+            char c = dir_path.charAt(i);
+            if (c == '/' || i == dir_path.length()) {
+                if (i > start_pos) {
+                    current_path = dir_path.substring(0, i);
+                    if (!is_dir_exist(current_path)) {
+                        if (!LittleFS.mkdir(current_path)) {
+                            Serial.printf("Error: failed to create directory: %s\n", current_path.c_str());
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+
+        return is_dir_exist(dir_path);
     }
 }
