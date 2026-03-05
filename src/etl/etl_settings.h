@@ -38,12 +38,18 @@ namespace etl
             VERBOSE = 2    // Все сообщения
         };
 
+        // Глобальный режим трассировки для всех настроек
+        static inline trace_mode_t _trace_mode = trace_mode_t::SILENT;
+
+        // Установить режим трассировки
+        inline void set_trace_mode(trace_mode_t mode) { _trace_mode = mode; }
+        // Получить режим трассировки
+        inline trace_mode_t get_trace_mode() { return _trace_mode; }
+
         // Управление всеми настройками
         template<typename T>
         class data
         {
-            static inline trace_mode_t _trace_mode = trace_mode_t::SILENT;  // Режим трассировки
-
             String   _path; // Путь к файлу для сохранения настроек
             FileData _fd;   // Управление загрузкой данных в файловую система
             T        _data; // структура данных
@@ -57,11 +63,6 @@ namespace etl
             , _data()
             {}
             virtual ~data() = default;
-
-            // Установить режим трассировки
-            static void set_trace_mode(trace_mode_t mode) { _trace_mode = mode; }
-            // Получить режим трассировки
-            static trace_mode_t get_trace_mode() { return _trace_mode; }
 
             bool init()    // Инициализировать все настройки и считать значения из памяти или записать по-умолчанию в первый раз
             {
