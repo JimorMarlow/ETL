@@ -58,7 +58,7 @@ namespace unittest {
     //    profiler_average_filter(trace);
     //    profiler_lookup_table(trace);
     //    profiler_color_tds(trace);
-        profiler_lookup_ntc(trace);
+    //    profiler_lookup_ntc(trace);
 
         return true;
     }
@@ -987,13 +987,18 @@ namespace unittest {
         uint32_t pgm_time = compare_lookup_time("pgm_lookup", resistance_lookup_pgm, step);
         uint32_t arr_time = compare_lookup_time("arr_lookup", resistance_lookup_arr, step);
         uint32_t vec_time = compare_lookup_time("vec_lookup", resistance_lookup_vec, step);
-        trace.printf("%s;\t%d us;\t\n", "pgm_lookup", pgm_time);  
-        trace.printf("%s;\t%d us;\t\n", "arr_lookup", arr_time);  
-        trace.printf("%s;\t%d us;\t\n", "vec_lookup", vec_time);  
+        trace.printf("%s;\t%d us;\t\n", "pgm_lookup", pgm_time);
+        trace.printf("%s;\t%d us;\t\n", "arr_lookup", arr_time);
+        trace.printf("%s;\t%d us;\t\n", "vec_lookup", vec_time);
         // OUTPUT:
-        // pgm_lookup;     99 us;
-        // arr_lookup;     28 us;
-        // vec_lookup;     28 us;
+        // +----------+------------+------------+------------+
+        // | Конфигурация          | pgm_lookup | arr_lookup | vec_lookup |
+        // +-----------------------+------------+------------+------------+
+        // | ESP8266 (до оптим.)   | 99 us      | 28 us      | 28 us      |
+        // | ESP8266 (после опт.)  | 36 us      | 21 us      | 21 us      |
+        // | ESP32-C3              | 20 us      | 16 us      | 16 us      |
+        // | ESP32-WROOM-32U       | TODO       | TODO       | TODO       |
+        // +-----------------------+------------+------------+------------+
     }
 
     ///////////////////////////////////////////////////////
