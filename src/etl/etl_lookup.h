@@ -47,9 +47,11 @@ private:
     bounds_mode bounds_ = bounds_mode::CLAMP;
     
     // Кэш последней найденной позиции для оптимизации последовательных запросов
-    mutable etl::optional<int> last_index_;  // не валиден, пока не заполнен
-    mutable T last_raw_min_ = T{};      // нижняя граница последнего диапазона
-    mutable T last_raw_max_ = T{};      // верхняя граница последнего диапазона
+    // Хранит индексы двух точек между которыми находится значение
+    mutable etl::optional<size_t> last_prev_index_;  // индекс левой точки (prev)
+    mutable etl::optional<size_t> last_next_index_;  // индекс правой точки (next)
+    mutable T last_raw_min_ = T{};      // нижняя граница кэшированного диапазона
+    mutable T last_raw_max_ = T{};      // верхняя граница кэшированного диапазона
 
     // Определяем направление сортировки
     bool is_ascending() const {
@@ -59,40 +61,43 @@ private:
 
     // Быстрая проверка: находится ли значение в кэшированном диапазоне
     bool in_cached_range(const T& raw) const {
-        if (!last_index_) return false;  // кэш не валиден
+        if (!last_prev_index_.has_value() || !last_next_index_.has_value()) return false;
         if (is_ascending()) {
-            // Для восходящего порядка: [min, max) - верхняя граница не включается
             return raw >= last_raw_min_ && raw < last_raw_max_;
         } else {
-            // Для нисходящего порядка: (min, max] - верхняя граница не включается
             return raw <= last_raw_min_ && raw > last_raw_max_;
         }
     }
 
     // Бинарный поиск в отсортированном массиве
+    // Возвращает индекс для использования в raw_to_value():
+    // - 0: raw <= table_[0].raw (левая граница)
+    // - size: raw >= table_[size-1].raw (правая граница)
+    // - иначе: raw между table_[index-1] и table_[index]
     size_t find_index(const T& raw) const {
         if (table_.empty()) return 0;
 
         // Оптимизация: проверяем, находимся ли мы в том же диапазоне
         if (in_cached_range(raw)) {
-            return static_cast<size_t>(last_index_.value());
+            return last_prev_index_.value() + 1;  // возвращаем index = prev + 1
         }
 
         // Сбрасываем кэш и выполняем полный поиск
-        last_index_.reset();
+        last_prev_index_.reset();
+        last_next_index_.reset();
 
         size_t left = 0;
         size_t right = table_.size() - 1;
 
         if (is_ascending()) {
             if(raw <= table_[left].raw) {
-                last_index_ = 0;
                 last_raw_min_ = table_[left].raw;
                 last_raw_max_ = (table_.size() > 1) ? table_[1].raw : table_[left].raw;
                 return 0;    // less of left boundary
             }
             if(raw >= table_[right].raw) {
-                last_index_ = static_cast<int>(table_.size());
+                last_prev_index_ = table_.size() - 1;
+                last_next_index_ = table_.size() - 1;
                 last_raw_min_ = (table_.size() > 1) ? table_[table_.size() - 2].raw : table_[right].raw;
                 last_raw_max_ = table_[right].raw;
                 return table_.size();  // greater of right boundary
@@ -100,8 +105,9 @@ private:
             while (left <= right) {
                 size_t mid = left + (right - left) / 2;
                 if (table_[mid].raw == raw) {
-                    // Точное совпадение - кэшируем диапазон для интерполяции с предыдущей точкой
-                    last_index_ = static_cast<int>(mid);
+                    // Точное совпадение - кэшируем диапазон с предыдущей точкой
+                    last_prev_index_ = (mid > 0) ? mid - 1 : mid;
+                    last_next_index_ = mid;
                     last_raw_min_ = (mid > 0) ? table_[mid - 1].raw : table_[mid].raw;
                     last_raw_max_ = table_[mid].raw;
                     return mid;
@@ -110,20 +116,21 @@ private:
                 else right = mid - 1;
             }
             // left указывает на позицию вставки, значит raw между table_[left-1] и table_[left]
-            last_index_ = static_cast<int>(left);
+            last_prev_index_ = left - 1;
+            last_next_index_ = left;
             last_raw_min_ = table_[left - 1].raw;
             last_raw_max_ = table_[left].raw;
             return left;
         } else {
             // для убывающего порядка
             if(raw >= table_[left].raw) {
-                last_index_ = 0;
                 last_raw_min_ = table_[left].raw;
                 last_raw_max_ = (table_.size() > 1) ? table_[1].raw : table_[left].raw;
                 return 0;    // greater of left boundary
             }
             if(raw <= table_[right].raw) {
-                last_index_ = static_cast<int>(table_.size());
+                last_prev_index_ = table_.size() - 1;
+                last_next_index_ = table_.size() - 1;
                 last_raw_min_ = (table_.size() > 1) ? table_[table_.size() - 2].raw : table_[right].raw;
                 last_raw_max_ = table_[right].raw;
                 return table_.size();  // less of right boundary
@@ -131,8 +138,9 @@ private:
             while (left <= right) {
                 size_t mid = left + (right - left) / 2;
                 if (table_[mid].raw == raw) {
-                    // Точное совпадение - кэшируем диапазон для интерполяции с предыдущей точкой
-                    last_index_ = static_cast<int>(mid);
+                    // Точное совпадение - кэшируем диапазон с предыдущей точкой
+                    last_prev_index_ = (mid > 0) ? mid - 1 : mid;
+                    last_next_index_ = mid;
                     last_raw_min_ = (mid > 0) ? table_[mid - 1].raw : table_[mid].raw;
                     last_raw_max_ = table_[mid].raw;
                     return mid;
@@ -140,7 +148,8 @@ private:
                 if (table_[mid].raw > raw) left = mid + 1;
                 else right = mid - 1;
             }
-            last_index_ = static_cast<int>(left);
+            last_prev_index_ = left - 1;
+            last_next_index_ = left;
             last_raw_min_ = table_[left - 1].raw;
             last_raw_max_ = table_[left].raw;
             return left;
@@ -242,15 +251,17 @@ public:
     }
     
     // Set/Get методы для режимов
-    void set_lookup_mode(lookup_mode mode) { 
-        mode_ = mode; 
-        last_index_.reset();  // сброс кэша при смене режима
+    void set_lookup_mode(lookup_mode mode) {
+        mode_ = mode;
+        last_prev_index_.reset();
+        last_next_index_.reset();
     }
     lookup_mode get_lookup_mode() const { return mode_; }
 
-    void set_bounds_mode(bounds_mode bounds) { 
-        bounds_ = bounds; 
-        last_index_.reset();  // сброс кэша при смене режима
+    void set_bounds_mode(bounds_mode bounds) {
+        bounds_ = bounds;
+        last_prev_index_.reset();
+        last_next_index_.reset();
     }
     bounds_mode get_bounds_mode() const { return bounds_; }
     
@@ -285,12 +296,14 @@ public:
     // Установка новой таблицы
     void set_table(const Container& table) {
         table_ = table;
-        last_index_.reset();  // сброс кэша
+        last_prev_index_.reset();
+        last_next_index_.reset();
     }
     
     // Сброс кэша поиска (полезно при изменении данных в таблице)
     void reset_cache() const {
-        last_index_.reset();
+        last_prev_index_.reset();
+        last_next_index_.reset();
     }
 };
 
