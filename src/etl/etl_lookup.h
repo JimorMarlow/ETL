@@ -238,10 +238,16 @@ public:
     }
     
     // Set/Get методы для режимов
-    void set_lookup_mode(lookup_mode mode) { mode_ = mode; }
+    void set_lookup_mode(lookup_mode mode) { 
+        mode_ = mode; 
+        last_index_.reset();  // сброс кэша при смене режима
+    }
     lookup_mode get_lookup_mode() const { return mode_; }
-    
-    void set_bounds_mode(bounds_mode bounds) { bounds_ = bounds; }
+
+    void set_bounds_mode(bounds_mode bounds) { 
+        bounds_ = bounds; 
+        last_index_.reset();  // сброс кэша при смене режима
+    }
     bounds_mode get_bounds_mode() const { return bounds_; }
     
     // Получение минимального и максимального raw
