@@ -98,9 +98,10 @@ private:
             while (left <= right) {
                 size_t mid = left + (right - left) / 2;
                 if (table_[mid].raw == raw) {
+                    // Точное совпадение - кэшируем диапазон для интерполяции с предыдущей точкой
                     last_index_ = static_cast<int>(mid);
                     last_raw_min_ = (mid > 0) ? table_[mid - 1].raw : table_[mid].raw;
-                    last_raw_max_ = (mid < table_.size() - 1) ? table_[mid + 1].raw : table_[mid].raw;
+                    last_raw_max_ = table_[mid].raw;
                     return mid;
                 }
                 if (table_[mid].raw < raw) left = mid + 1;
@@ -128,9 +129,10 @@ private:
             while (left <= right) {
                 size_t mid = left + (right - left) / 2;
                 if (table_[mid].raw == raw) {
+                    // Точное совпадение - кэшируем диапазон для интерполяции с предыдущей точкой
                     last_index_ = static_cast<int>(mid);
                     last_raw_min_ = (mid > 0) ? table_[mid - 1].raw : table_[mid].raw;
-                    last_raw_max_ = (mid < table_.size() - 1) ? table_[mid + 1].raw : table_[mid].raw;
+                    last_raw_max_ = table_[mid].raw;
                     return mid;
                 }
                 if (table_[mid].raw > raw) left = mid + 1;
