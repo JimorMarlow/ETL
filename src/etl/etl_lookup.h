@@ -2,6 +2,7 @@
 #include "Arduino.h"
 #include "etl_array.h"
 #include "etl_vector.h"
+#include "etl_optional.h"
 
 namespace etl {
 
@@ -44,40 +45,100 @@ private:
     Container table_;
     lookup_mode mode_ = lookup_mode::INTERPOLATE;
     bounds_mode bounds_ = bounds_mode::CLAMP;
-        
+    
+    // Кэш последней найденной позиции для оптимизации последовательных запросов
+    mutable etl::optional<int> last_index_;  // не валиден, пока не заполнен
+    mutable T last_raw_min_ = T{};      // нижняя граница последнего диапазона
+    mutable T last_raw_max_ = T{};      // верхняя граница последнего диапазона
+
     // Определяем направление сортировки
     bool is_ascending() const {
         if (table_.size() < 2) return true;
         return table_[0].raw < table_[1].raw;
     }
-    
+
+    // Быстрая проверка: находится ли значение в кэшированном диапазоне
+    bool in_cached_range(const T& raw) const {
+        if (!last_index_) return false;  // кэш не валиден
+        if (is_ascending()) {
+            return raw >= last_raw_min_ && raw <= last_raw_max_;
+        } else {
+            return raw <= last_raw_min_ && raw >= last_raw_max_;
+        }
+    }
+
     // Бинарный поиск в отсортированном массиве
     size_t find_index(const T& raw) const {
         if (table_.empty()) return 0;
-        
+
+        // Оптимизация: проверяем, находимся ли мы в том же диапазоне
+        if (in_cached_range(raw)) {
+            return static_cast<size_t>(last_index_.value());
+        }
+
+        // Сбрасываем кэш и выполняем полный поиск
+        last_index_.reset();
+
         size_t left = 0;
         size_t right = table_.size() - 1;
-        
+
         if (is_ascending()) {
-            if(raw <= table_[left].raw) return 0;    // less of left boundary
-            if(raw >= table_[right].raw) return table_.size();  // greater of right boundary
+            if(raw <= table_[left].raw) {
+                last_index_ = 0;
+                last_raw_min_ = table_[left].raw;
+                last_raw_max_ = (table_.size() > 1) ? table_[1].raw : table_[left].raw;
+                return 0;    // less of left boundary
+            }
+            if(raw >= table_[right].raw) {
+                last_index_ = static_cast<int>(table_.size());
+                last_raw_min_ = (table_.size() > 1) ? table_[table_.size() - 2].raw : table_[right].raw;
+                last_raw_max_ = table_[right].raw;
+                return table_.size();  // greater of right boundary
+            }
             while (left <= right) {
                 size_t mid = left + (right - left) / 2;
-                if (table_[mid].raw == raw) return mid;
+                if (table_[mid].raw == raw) {
+                    last_index_ = static_cast<int>(mid);
+                    last_raw_min_ = (mid > 0) ? table_[mid - 1].raw : table_[mid].raw;
+                    last_raw_max_ = (mid < table_.size() - 1) ? table_[mid + 1].raw : table_[mid].raw;
+                    return mid;
+                }
                 if (table_[mid].raw < raw) left = mid + 1;
                 else right = mid - 1;
             }
-            return left; // left указывает на позицию вставки
+            // left указывает на позицию вставки, значит raw между table_[left-1] и table_[left]
+            last_index_ = static_cast<int>(left);
+            last_raw_min_ = table_[left - 1].raw;
+            last_raw_max_ = table_[left].raw;
+            return left;
         } else {
             // для убывающего порядка
-            if(raw >= table_[left].raw) return 0;    // greater of left boundary
-            if(raw <= table_[right].raw) return table_.size();  // less of right boundary
+            if(raw >= table_[left].raw) {
+                last_index_ = 0;
+                last_raw_min_ = table_[left].raw;
+                last_raw_max_ = (table_.size() > 1) ? table_[1].raw : table_[left].raw;
+                return 0;    // greater of left boundary
+            }
+            if(raw <= table_[right].raw) {
+                last_index_ = static_cast<int>(table_.size());
+                last_raw_min_ = (table_.size() > 1) ? table_[table_.size() - 2].raw : table_[right].raw;
+                last_raw_max_ = table_[right].raw;
+                return table_.size();  // less of right boundary
+            }
             while (left <= right) {
                 size_t mid = left + (right - left) / 2;
-                if (table_[mid].raw == raw) return mid;
+                if (table_[mid].raw == raw) {
+                    last_index_ = static_cast<int>(mid);
+                    last_raw_min_ = (mid > 0) ? table_[mid - 1].raw : table_[mid].raw;
+                    last_raw_max_ = (mid < table_.size() - 1) ? table_[mid + 1].raw : table_[mid].raw;
+                    return mid;
+                }
                 if (table_[mid].raw > raw) left = mid + 1;
                 else right = mid - 1;
             }
+            last_index_ = static_cast<int>(left);
+            last_raw_min_ = table_[left - 1].raw;
+            last_raw_max_ = table_[left].raw;
             return left;
         }
     }
@@ -214,6 +275,12 @@ public:
     // Установка новой таблицы
     void set_table(const Container& table) {
         table_ = table;
+        last_index_.reset();  // сброс кэша
+    }
+    
+    // Сброс кэша поиска (полезно при изменении данных в таблице)
+    void reset_cache() const {
+        last_index_.reset();
     }
 };
 
