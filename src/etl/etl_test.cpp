@@ -58,7 +58,7 @@ namespace unittest {
     //    profiler_average_filter(trace);
     //    profiler_lookup_table(trace);
     //    profiler_color_tds(trace);
-    //    profiler_lookup_ntc(trace);
+        profiler_lookup_ntc(trace);
 
         return true;
     }
