@@ -543,7 +543,7 @@ namespace unittest {
         
         // Создаем lookup для цветов
         auto color_lookup = etl::make_color_lookup<int>(temperature_colors);
-        
+
         // Тестируем ключевые точки        //Serial.println("Key points:");
         TEST_EQUAL("-20°C: " + color_lookup.raw_to_value(-20).to_string(), "-20°C: RGB(0,0,255)", "Должен быть синий");
         TEST_EQUAL("0°C: " + color_lookup.raw_to_value(0).to_string(), "0°C: RGB(255,255,255)", "Должен быть белый");

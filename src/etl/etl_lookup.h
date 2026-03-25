@@ -61,9 +61,11 @@ private:
     bool in_cached_range(const T& raw) const {
         if (!last_index_) return false;  // кэш не валиден
         if (is_ascending()) {
-            return raw >= last_raw_min_ && raw <= last_raw_max_;
+            // Для восходящего порядка: [min, max) - верхняя граница не включается
+            return raw >= last_raw_min_ && raw < last_raw_max_;
         } else {
-            return raw <= last_raw_min_ && raw >= last_raw_max_;
+            // Для нисходящего порядка: (min, max] - верхняя граница не включается
+            return raw <= last_raw_min_ && raw > last_raw_max_;
         }
     }
 

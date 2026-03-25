@@ -7,7 +7,7 @@
 
 #define ETL_VERSION_MAJOR 0
 #define ETL_VERSION_MINOR 9
-#define ETL_VERSION_PATCH 26
+#define ETL_VERSION_PATCH 27
 
 // Хелпер для stringify
 #define ETL_STRINGIFY_HELPER(x) #x
