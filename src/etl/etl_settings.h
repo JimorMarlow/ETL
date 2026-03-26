@@ -132,7 +132,8 @@ namespace etl
             {
                 _data = data;
                 if(update_now) {
-                    return _fd.updateNow() == FD_WRITE;
+                    auto fd_result = _fd.updateNow();
+                    return (fd_result == FD_WRITE || fd_result == FD_NO_DIF);
                 } else {
                     _fd.update();
                 }
@@ -144,7 +145,8 @@ namespace etl
 
             // Принудительное сохранение
             bool save() {
-                return _fd.updateNow() == FD_WRITE;
+                auto fd_result = _fd.updateNow();
+                return (fd_result == FD_WRITE || fd_result == FD_NO_DIF);
             }
         };
     }//..settings 
