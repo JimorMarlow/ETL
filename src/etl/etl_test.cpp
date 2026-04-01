@@ -97,9 +97,29 @@ namespace unittest {
         hum.reset();
         TEST_EQUAL(hum.has_value(), false, "reset failed");
 
-        int value1 = hum.value_or(5); 
+        int value1 = hum.value_or(5);
         TEST_EQUAL(hum.has_value(), false, "value_or(5)");
         TEST_EQUAL(value1, 5, "value_or(5) failed");
+
+        // nullopt tests
+        etl::optional<int> opt = etl::nullopt;
+        TEST_EQUAL(opt.has_value(), false, "nullopt constructor");
+        TEST_EQUAL((opt == etl::nullopt), true, "compare with nullopt (==)");
+        TEST_EQUAL((opt != etl::nullopt), false, "compare with nullopt (!=)");
+        TEST_EQUAL((etl::nullopt == opt), true, "nullopt on left (==)");
+        TEST_EQUAL((etl::nullopt != opt), false, "nullopt on left (!=)");
+
+        opt = 42;
+        TEST_EQUAL(opt.has_value(), true, "assign value after nullopt");
+        TEST_EQUAL((opt != etl::nullopt), true, "value != nullopt");
+
+        opt = etl::nullopt;
+        TEST_EQUAL(opt.has_value(), false, "assign nullopt");
+        TEST_EQUAL((opt == etl::nullopt), true, "reassigned == nullopt");
+
+        etl::optional<int> opt2;
+        opt2 = etl::nullopt;
+        TEST_EQUAL(opt2.has_value(), false, "default then nullopt");
 
         return "";  // no errors
     }

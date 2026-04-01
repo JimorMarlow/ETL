@@ -1,11 +1,19 @@
 #pragma once
 
-/* 
+/*
 Минималистичный вариант для optional по типу stl
 */
 
 namespace etl
 {
+    // Тип для пустого значения (аналог std::nullopt_t)
+    struct nullopt_t {
+        explicit constexpr nullopt_t() = default;
+    };
+
+    // Глобальная константа для обозначения пустого значения
+    constexpr nullopt_t nullopt{};
+
     template<typename T>
     class optional {
     private:
@@ -35,23 +43,26 @@ namespace etl
     public:
         // Конструкторы
         optional() = default;
-        
+
+        // Конструктор для nullopt
+        optional(nullopt_t) : _has_value(false) {}
+
         optional(const T& value) {
             construct(value);
         }
-        
+
         // Копирующий конструктор
         optional(const optional& other) {
             if (other.has_value()) {
                 construct(*other);
             }
         }
-        
+
         // Деструктор
         ~optional() {
             destruct();
         }
-        
+
         // ОСНОВНОЙ ИСПРАВЛЕННЫЙ ОПЕРАТОР ПРИСВАИВАНИЯ
         optional& operator=(const optional& other) {
             if (this != &other) {
@@ -64,7 +75,13 @@ namespace etl
             }
             return *this;
         }
-        
+
+        // Присвоение nullopt
+        optional& operator=(nullopt_t) {
+            reset();
+            return *this;
+        }
+
         // Присвоение значения
         optional& operator=(const T& value) {
             destruct();
@@ -121,6 +138,23 @@ namespace etl
             destruct();
             new(storage) T(std::forward<Args>(args)...);
             _has_value = true;
+        }
+
+        // Операторы сравнения с nullopt
+        friend bool operator==(const optional& opt, nullopt_t) {
+            return !opt._has_value;
+        }
+
+        friend bool operator==(nullopt_t, const optional& opt) {
+            return !opt._has_value;
+        }
+
+        friend bool operator!=(const optional& opt, nullopt_t) {
+            return opt._has_value;
+        }
+
+        friend bool operator!=(nullopt_t, const optional& opt) {
+            return opt._has_value;
         }
     };
 }
@@ -215,6 +249,28 @@ atl::optional<SensorData> readSensorData() {
     }
     
     return atl::optional<SensorData>(); // Ошибка
+}
+
+// Использование nullopt:
+etl::optional<int> find_value(bool found) {
+    if (!found) {
+        return etl::nullopt;  // Явный возврат пустого значения
+    }
+    return 42;
+}
+
+void nullopt_demo() {
+    etl::optional<int> opt = etl::nullopt;  // Конструктор из nullopt
+    opt = 10;
+    opt = etl::nullopt;                     // Присваивание nullopt
+    
+    if (opt == etl::nullopt) {              // Сравнение с nullopt
+        Serial.println("opt is empty");
+    }
+    
+    if (opt != etl::nullopt) {
+        Serial.println("opt has value");
+    }
 }
 
 */
