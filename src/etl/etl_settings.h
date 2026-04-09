@@ -46,6 +46,23 @@ namespace etl
         // Получить режим трассировки
         inline trace_mode_t get_trace_mode() { return _trace_mode; }
 
+        // Идентификаторы источников изменений настроек
+        enum class sender_id : uint8_t
+        {
+            broadcast = 0,  // Широковещательная рассылка (системный)
+            system = 1,     // Главное приложение (датчики, автоматика)
+            webui,          // Веб-интерфейс (обновление от пользователя)
+            setup,          // Сервер настроек
+            view,           // Пользовательский интерфейс
+            user1,          // Пользовательское расширение 1
+            user2,          // Пользовательское расширение 2
+            user3,          // Пользовательское расширение 3
+            count           // Счётчик для валидации (не используется клиентами)
+        };
+
+        // Тип callback'а для уведомления об изменениях
+        using change_callback = std::function<void(sender_id)>;
+
         // Управление всеми настройками
         template<typename T>
         class data
@@ -54,6 +71,8 @@ namespace etl
             FileData _fd;   // Управление загрузкой данных в файловую система
             T        _data; // структура данных
 
+            // Статический массив указателей на callback'и (nullptr = не зарегистрирован)
+            change_callback* _notify[static_cast<uint8_t>(sender_id::count)] = {nullptr};
 
         public:
             // Путь к настройкам для этой структуры и интервал записи после обновленя в мс
@@ -62,7 +81,55 @@ namespace etl
             , _fd (&LittleFS, path.c_str(), 'B', &_data, sizeof(_data), update_timeout)
             , _data(default_data)
             {}
-            virtual ~data() = default;
+
+            virtual ~data()
+            {
+                for (uint8_t i = 0; i < static_cast<uint8_t>(sender_id::count); ++i) {
+                    delete _notify[i];
+                    _notify[i] = nullptr;
+                }
+            }
+
+            // Зарегистрировать callback для источника изменений
+            // Возвращает true при успешной регистрации
+            // ВАЖНО: клиент обязан вызвать unsubscribe() при уничтожении объекта
+            bool subscribe(sender_id id, change_callback cb)
+            {
+                uint8_t idx = static_cast<uint8_t>(id);
+                if (idx >= static_cast<uint8_t>(sender_id::count)) return false;
+                if (id == sender_id::broadcast) return false;  // broadcast не регистрируется
+
+                // Удаляем предыдущий callback если был
+                delete _notify[idx];
+                _notify[idx] = nullptr;
+
+                // Создаём новый callback в куче
+                _notify[idx] = new (std::nothrow) change_callback(std::move(cb));
+                return _notify[idx] != nullptr;
+            }
+
+            // Удалить callback источника
+            // Возвращает true если callback был найден и удалён
+            bool unsubscribe(sender_id id)
+            {
+                uint8_t idx = static_cast<uint8_t>(id);
+                if (idx >= static_cast<uint8_t>(sender_id::count)) return false;
+
+                if (_notify[idx] != nullptr) {
+                    delete _notify[idx];
+                    _notify[idx] = nullptr;
+                    return true;
+                }
+                return false;
+            }
+
+            // Проверка регистрации callback'а для источника
+            bool is_subscribed(sender_id id) const
+            {
+                uint8_t idx = static_cast<uint8_t>(id);
+                if (idx >= static_cast<uint8_t>(sender_id::count)) return false;
+                return _notify[idx] != nullptr;
+            }
 
             bool init()    // Инициализировать все настройки и считать значения из памяти или записать по-умолчанию в первый раз
             {
@@ -137,7 +204,22 @@ namespace etl
                 } else {
                     _fd.update();
                 }
-                return true;  
+                return true;
+            }
+
+            // Изменить настройки с указанием источника (для фильтрации нотификаций)
+            // source - источник изменений (не получит нотификацию)
+            // Если source == broadcast - нотификацию получат ВСЕ подписчики
+            // Возвращает результат базового метода set(), callback'и не влияют
+            bool set(const T& data, sender_id source, bool update_now = false)
+            {
+                // Вызываем базовый set
+                bool result = set(data, update_now);
+                
+                // Рассылаем нотификации (результат не влияет на возвращаемое значение)
+                notify_changed(source);
+                
+                return result;
             }
 
             // Получить ссылку на настройки (для прямого изменения)
@@ -148,11 +230,36 @@ namespace etl
                 auto fd_result = _fd.updateNow();
                 return (fd_result == FD_WRITE || fd_result == FD_NO_DIF);
             }
+
+        private:
+            // Рассылка нотификаций всем подписчикам кроме исключённого источника
+            void notify_changed(sender_id excluded_source)
+            {
+                uint8_t count = static_cast<uint8_t>(sender_id::count);
+                
+                for (uint8_t i = 0; i < count; ++i)
+                {
+                    sender_id id = static_cast<sender_id>(i);
+                    
+                    // Если source != broadcast - пропускаем broadcast
+                    if (excluded_source != sender_id::broadcast && id == sender_id::broadcast) continue;
+                    
+                    // Пропускаем источник изменений (кроме broadcast - он получает всё)
+                    if (excluded_source != sender_id::broadcast && id == excluded_source) continue;
+
+                    // Проверяем наличие callback'а
+                    if (_notify[i] != nullptr) {
+                        // Вызываем callback напрямую (исключения на ESP отключены)
+                        (*_notify[i])(excluded_source);
+                    }
+                }
+            }
+
         };
     }//..settings 
 }//..etl
 
-/// Использование 
+/// Использование
 /*
 
 // settings.h
@@ -172,7 +279,7 @@ namespace settings
             Serial.printf("brightness = %g\n", brightness);
             Serial.printf("topic = %s\n", topic);
             Serial.println("========================");
-        }            
+        }
     };
 }// settings
 
@@ -198,11 +305,11 @@ void control::tick() // true - fade timer finished
     _settings.tick();
 }
 
-float control::brightness() const { 
+float control::brightness() const {
     return _settings.get().brightness;
 }
-void control::set_brightness(float brightness_value) 
-{ 
+void control::set_brightness(float brightness_value)
+{
     auto data = _settings.get();
     data.brightness = etl::clamp<float>(brightness_value, 0.0, 1.0);
     _settings.set(data);
@@ -211,15 +318,155 @@ void control::set_brightness(float brightness_value)
 // Settings
 control light;  // глобальный экземпляр настроек
 
-void setup() 
+void setup()
 {
     light.init();
 }
 
 // main.cpp
-void loop() 
+void loop()
 {
   light.tick();
 }
 
+// ========================
+// Работа с callback'ами
+// ========================
+
+// Глобальные настройки
+etl::settings::data<settings::kitchen_light_t> kitchen_settings("/kitchen.cfg");
+
+// --- 1. Простая подписка с лямбдой ---
+void setup_callbacks()
+{
+    kitchen_settings.init();
+    
+    // Подписка из веб-сервера
+    kitchen_settings.subscribe(etl::settings::sender_id::webui, [](etl::settings::sender_id source) {
+        Serial.println("Settings changed - updating web UI");
+        update_web_ui();
+    });
+    
+    // Подписка из модуля сенсоров
+    kitchen_settings.subscribe(etl::settings::sender_id::system, [](etl::settings::sender_id source) {
+        Serial.printf("System notified by source: %d\n", static_cast<uint8_t>(source));
+    });
+}
+
+// --- 2. Подписка из класса с захватом this ---
+class web_server {
+    etl::settings::data<settings::kitchen_light_t>& _settings;
+    
+public:
+    web_server(etl::settings::data<settings::kitchen_light_t>& settings) 
+    : _settings(settings) 
+    {
+        _settings.subscribe(etl::settings::sender_id::webui, [this](etl::settings::sender_id source) {
+            this->on_settings_changed(source);
+        });
+    }
+    
+    ~web_server() {
+        // ОБЯЗАТЕЛЬНО: удалить callback при уничтожении объекта
+        _settings.unsubscribe(etl::settings::sender_id::webui);
+    }
+    
+    void on_settings_changed(etl::settings::sender_id source) {
+        auto data = _settings.get();
+        Serial.printf("Web server: brightness = %f, source = %d\n", data.brightness, static_cast<uint8_t>(source));
+    }
+};
+
+// --- 3. Изменение настроек с указанием источника ---
+void on_web_slider_change(float value)
+{
+    auto data = kitchen_settings.get();
+    data.brightness = value;
+    // webui callback НЕ вызовется, system callback вызовется
+    kitchen_settings.set(data, etl::settings::sender_id::webui);
+}
+
+void on_sensor_update(float value)
+{
+    auto data = kitchen_settings.get();
+    data.brightness = value;
+    // system callback НЕ вызовется, webui callback вызовется
+    kitchen_settings.set(data, etl::settings::sender_id::system);
+}
+
+// --- 4. Широковещательная рассылка всем ---
+void broadcast_change()
+{
+    auto data = kitchen_settings.get();
+    // ВСЕ callback'и вызовутся (и webui, и system)
+    kitchen_settings.set(data, etl::settings::sender_id::broadcast);
+}
+
+// --- 5. Проверка регистрации callback'а ---
+void check_subscription()
+{
+    if (kitchen_settings.is_subscribed(etl::settings::sender_id::webui)) {
+        Serial.println("Web UI is subscribed");
+    }
+}
+
+// --- 6. Отписка и повторная подписка ---
+void toggle_subscription(bool enable)
+{
+    if (enable) {
+        kitchen_settings.subscribe(etl::settings::sender_id::webui, [](etl::settings::sender_id) {
+            Serial.println("Web UI notified");
+        });
+    } else {
+        kitchen_settings.unsubscribe(etl::settings::sender_id::webui);
+    }
+}
+
+// --- 7. Использование пользовательских расширений ---
+// Клиентские программы могут использовать user1, user2, user3
+// без переопределения стандартных идентификаторов
+void setup_custom_callbacks()
+{
+    // Алиас для своего модуля
+    constexpr auto my_module = etl::settings::sender_id::user1;
+    
+    kitchen_settings.subscribe(my_module, [](etl::settings::sender_id source) {
+        Serial.println("Custom module received update");
+    });
+    
+    // Изменение из своего модуля
+    auto data = kitchen_settings.get();
+    data.state = true;
+    kitchen_settings.set(data, my_module);  // my_module callback НЕ вызовется
+}
+
+// --- 8. Безопасное использование с динамическими объектами ---
+class dynamic_module {
+    etl::settings::data<settings::kitchen_light_t>& _settings;
+    bool _active = true;
+    
+public:
+    dynamic_module(etl::settings::data<settings::kitchen_light_t>& settings)
+    : _settings(settings)
+    {
+        _settings.subscribe(etl::settings::sender_id::user2, [this](etl::settings::sender_id source) {
+            if (_active) {
+                Serial.println("Dynamic module received update");
+            }
+        });
+    }
+    
+    void deactivate() {
+        _active = false;
+        // Отписываемся при деактивации
+        _settings.unsubscribe(etl::settings::sender_id::user2);
+    }
+    
+    ~dynamic_module() {
+        // Двойная защита: отписываемся в деструкторе
+        _settings.unsubscribe(etl::settings::sender_id::user2);
+    }
+};
+
 */
+

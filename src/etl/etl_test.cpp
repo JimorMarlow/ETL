@@ -1144,6 +1144,70 @@ namespace unittest {
         TEST_EQUAL(v3.weather.temperature, v2.weather.temperature, "default settings weather.temperature");
         TEST_EQUAL(v3.weather.humidity, v2.weather.humidity, "default settings weather.humidity");
 
+        // Работа с callback'ами
+        struct callback_count_t {
+           int system = 0;     
+           int webui = 0;
+           int view = 0;
+        };
+        callback_count_t cb_count; // Счетчик колбэков для отладки
+
+        {
+            // Считывание настроек из постоянной памяти
+            etl::settings::data<settings::data_t> data (settings::data_path, settings::data_update_delay);   
+            TEST_EQUAL(data.init(), true, "data.init");
+            settings::data_t v = data.get(); 
+            
+            // Подписки на события
+            data.subscribe(etl::settings::sender_id::system, [&cb_count](etl::settings::sender_id source) {
+                cb_count.system ++;
+            });
+            data.subscribe(etl::settings::sender_id::webui, [&cb_count](etl::settings::sender_id source) {
+                cb_count.webui ++;
+            });
+            data.subscribe(etl::settings::sender_id::view, [&cb_count](etl::settings::sender_id source) {
+                cb_count.view ++;
+            });
+
+            // Изменяем данные в main
+            v.percent = 10;
+            data.set(v, etl::settings::sender_id::system);
+            TEST_EQUAL(cb_count.system, 0, "1: cb_count.system 0"); // не изменилось
+            TEST_EQUAL(cb_count.webui, 1, "1: cb_count.webui 1");   // +1
+            TEST_EQUAL(cb_count.view, 1, "1: cb_count.view 1");     // +1
+
+            // Изменяем данные из веб-интерфейса
+            v.percent = 20;
+            data.set(v, etl::settings::sender_id::webui);
+            TEST_EQUAL(cb_count.system, 1, "2: cb_count.system 1"); // +1
+            TEST_EQUAL(cb_count.webui, 1, "2: cb_count.webui 1");   // не изменилось
+            TEST_EQUAL(cb_count.view, 2, "2: cb_count.view 2");     // +1
+
+            // Изменяем данные из view
+            v.percent = 30;
+            data.set(v, etl::settings::sender_id::view);
+            TEST_EQUAL(cb_count.system, 2, "3: cb_count.system 2"); // +1
+            TEST_EQUAL(cb_count.webui, 2, "3: cb_count.webui 2");   // +1
+            TEST_EQUAL(cb_count.view, 2, "3: cb_count.view 2");     // не изменилось
+
+            // Изменяем данные от датчиков с общей рассылкой
+            v.percent = 40;
+            data.set(v, etl::settings::sender_id::broadcast);
+            TEST_EQUAL(cb_count.system, 3, "4: cb_count.system 3"); // +1
+            TEST_EQUAL(cb_count.webui, 3, "4: cb_count.webui 3");   // +1
+            TEST_EQUAL(cb_count.view, 3, "4: cb_count.view 3");     // +1
+
+            // Изменяем данные от датчиков с общей рассылкой
+            // допустим веб-серер закрыли
+            data.unsubscribe(etl::settings::sender_id::webui);
+            v.percent = 50;
+            data.set(v, etl::settings::sender_id::broadcast);
+            TEST_EQUAL(cb_count.system, 4, "5: cb_count.system 4"); // +1
+            TEST_EQUAL(cb_count.webui, 3, "5: cb_count.webui 3");   // не изменилось
+            TEST_EQUAL(cb_count.view, 4, "5: cb_count.view 4");     // +1
+            
+        }
+
         return "";  // no errors
     }
 
