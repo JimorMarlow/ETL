@@ -54,6 +54,8 @@ namespace etl
             webui,          // Веб-интерфейс (обновление от пользователя)
             setup,          // Сервер настроек
             view,           // Пользовательский интерфейс
+            wifi,           // Менеджер wifi соединения
+            mqtt,           // MQTT протокол
             user1,          // Пользовательское расширение 1
             user2,          // Пользовательское расширение 2
             user3,          // Пользовательское расширение 3
@@ -63,26 +65,15 @@ namespace etl
         // Тип callback'а для уведомления об изменениях
         using change_callback = std::function<void(sender_id)>;
 
-        // Управление всеми настройками
-        template<typename T>
-        class data
+        // Базовый класс для организации подписки на изменения
+        class notify
         {
-            String   _path; // Путь к файлу для сохранения настроек
-            FileData _fd;   // Управление загрузкой данных в файловую система
-            T        _data; // структура данных
-
+        protected:
             // Статический массив указателей на callback'и (nullptr = не зарегистрирован)
             change_callback* _notify[static_cast<uint8_t>(sender_id::count)] = {nullptr};
 
         public:
-            // Путь к настройкам для этой структуры и интервал записи после обновленя в мс
-            data(const String& path, uint16_t update_timeout = 5000, const T& default_data = T() )
-            : _path(path)
-            , _fd (&LittleFS, path.c_str(), 'B', &_data, sizeof(_data), update_timeout)
-            , _data(default_data)
-            {}
-
-            virtual ~data()
+            virtual ~notify()
             {
                 for (uint8_t i = 0; i < static_cast<uint8_t>(sender_id::count); ++i) {
                     delete _notify[i];
@@ -130,6 +121,47 @@ namespace etl
                 if (idx >= static_cast<uint8_t>(sender_id::count)) return false;
                 return _notify[idx] != nullptr;
             }
+
+        protected:
+            // Рассылка нотификаций всем подписчикам кроме исключённого источника
+            void notify_changed(sender_id excluded_source)
+            {
+                uint8_t count = static_cast<uint8_t>(sender_id::count);
+
+                for (uint8_t i = 0; i < count; ++i)
+                {
+                    sender_id id = static_cast<sender_id>(i);
+
+                    // Если source != broadcast - пропускаем broadcast
+                    if (excluded_source != sender_id::broadcast && id == sender_id::broadcast) continue;
+
+                    // Пропускаем источник изменений (кроме broadcast - он получает всё)
+                    if (excluded_source != sender_id::broadcast && id == excluded_source) continue;
+
+                    // Проверяем наличие callback'а
+                    if (_notify[i] != nullptr) {
+                        // Вызываем callback напрямую (исключения на ESP отключены)
+                        (*_notify[i])(excluded_source);
+                    }
+                }
+            }
+        };
+
+        // Управление всеми настройками
+        template<typename T>
+        class data : public notify
+        {
+            String   _path; // Путь к файлу для сохранения настроек
+            FileData _fd;   // Управление загрузкой данных в файловую система
+            T        _data; // структура данных
+
+        public:
+            // Путь к настройкам для этой структуры и интервал записи после обновленя в мс
+            data(const String& path, uint16_t update_timeout = 5000, const T& default_data = T() )
+            : _path(path)
+            , _fd (&LittleFS, path.c_str(), 'B', &_data, sizeof(_data), update_timeout)
+            , _data(default_data)
+            {}
 
             bool init()    // Инициализировать все настройки и считать значения из памяти или записать по-умолчанию в первый раз
             {
@@ -230,33 +262,8 @@ namespace etl
                 auto fd_result = _fd.updateNow();
                 return (fd_result == FD_WRITE || fd_result == FD_NO_DIF);
             }
-
-        private:
-            // Рассылка нотификаций всем подписчикам кроме исключённого источника
-            void notify_changed(sender_id excluded_source)
-            {
-                uint8_t count = static_cast<uint8_t>(sender_id::count);
-                
-                for (uint8_t i = 0; i < count; ++i)
-                {
-                    sender_id id = static_cast<sender_id>(i);
-                    
-                    // Если source != broadcast - пропускаем broadcast
-                    if (excluded_source != sender_id::broadcast && id == sender_id::broadcast) continue;
-                    
-                    // Пропускаем источник изменений (кроме broadcast - он получает всё)
-                    if (excluded_source != sender_id::broadcast && id == excluded_source) continue;
-
-                    // Проверяем наличие callback'а
-                    if (_notify[i] != nullptr) {
-                        // Вызываем callback напрямую (исключения на ESP отключены)
-                        (*_notify[i])(excluded_source);
-                    }
-                }
-            }
-
         };
-    }//..settings 
+    }//..settings
 }//..etl
 
 /// Использование

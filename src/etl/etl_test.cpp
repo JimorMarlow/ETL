@@ -1150,9 +1150,11 @@ namespace unittest {
            int webui = 0;
            int view = 0;
         };
-        callback_count_t cb_count; // Счетчик колбэков для отладки
-
+        
+        // Проверка работы с данными, которые сохраняются в постоянной памяти
         {
+            callback_count_t cb_count; // Счетчик колбэков для отладки
+
             // Считывание настроек из постоянной памяти
             etl::settings::data<settings::data_t> data (settings::data_path, settings::data_update_delay);   
             TEST_EQUAL(data.init(), true, "data.init");
@@ -1202,6 +1204,69 @@ namespace unittest {
             data.unsubscribe(etl::settings::sender_id::webui);
             v.percent = 50;
             data.set(v, etl::settings::sender_id::broadcast);
+            TEST_EQUAL(cb_count.system, 4, "5: cb_count.system 4"); // +1
+            TEST_EQUAL(cb_count.webui, 3, "5: cb_count.webui 3");   // не изменилось
+            TEST_EQUAL(cb_count.view, 4, "5: cb_count.view 4");     // +1
+            
+        }
+
+        // Проверка работы с данными, которые меняются только в процессе работы
+        {
+            callback_count_t cb_count; // Счетчик колбэков для отладки
+
+            // Считывание настроек из постоянной памяти
+            class connection_state : public etl::settings::notify {
+                int _state = 0;  // test state data    
+            public: 
+                connection_state() = default;
+                virtual ~connection_state() = default;
+                virtual void set(int state, etl::settings::sender_id source) {
+                   _state = state;
+                   notify_changed(source);     
+                }
+            };
+
+            connection_state connection;    // тестовые данные
+            
+            // Подписки на события
+            connection.subscribe(etl::settings::sender_id::system, [&cb_count](etl::settings::sender_id source) {
+                cb_count.system ++;
+            });
+            connection.subscribe(etl::settings::sender_id::webui, [&cb_count](etl::settings::sender_id source) {
+                cb_count.webui ++;
+            });
+            connection.subscribe(etl::settings::sender_id::view, [&cb_count](etl::settings::sender_id source) {
+                cb_count.view ++;
+            });
+
+            // Изменяем данные в main
+            connection.set(1, etl::settings::sender_id::system);
+            TEST_EQUAL(cb_count.system, 0, "1: cb_count.system 0"); // не изменилось
+            TEST_EQUAL(cb_count.webui, 1, "1: cb_count.webui 1");   // +1
+            TEST_EQUAL(cb_count.view, 1, "1: cb_count.view 1");     // +1
+
+            // Изменяем данные из веб-интерфейса
+            connection.set(2, etl::settings::sender_id::webui);
+            TEST_EQUAL(cb_count.system, 1, "2: cb_count.system 1"); // +1
+            TEST_EQUAL(cb_count.webui, 1, "2: cb_count.webui 1");   // не изменилось
+            TEST_EQUAL(cb_count.view, 2, "2: cb_count.view 2");     // +1
+
+            // Изменяем данные из view
+            connection.set(3, etl::settings::sender_id::view);
+            TEST_EQUAL(cb_count.system, 2, "3: cb_count.system 2"); // +1
+            TEST_EQUAL(cb_count.webui, 2, "3: cb_count.webui 2");   // +1
+            TEST_EQUAL(cb_count.view, 2, "3: cb_count.view 2");     // не изменилось
+
+            // Изменяем данные от датчиков с общей рассылкой
+            connection.set(4, etl::settings::sender_id::broadcast);
+            TEST_EQUAL(cb_count.system, 3, "4: cb_count.system 3"); // +1
+            TEST_EQUAL(cb_count.webui, 3, "4: cb_count.webui 3");   // +1
+            TEST_EQUAL(cb_count.view, 3, "4: cb_count.view 3");     // +1
+
+            // Изменяем данные от датчиков с общей рассылкой
+            // допустим веб-серер закрыли
+            connection.unsubscribe(etl::settings::sender_id::webui);
+            connection.set(5, etl::settings::sender_id::broadcast);
             TEST_EQUAL(cb_count.system, 4, "5: cb_count.system 4"); // +1
             TEST_EQUAL(cb_count.webui, 3, "5: cb_count.webui 3");   // не изменилось
             TEST_EQUAL(cb_count.view, 4, "5: cb_count.view 4");     // +1
