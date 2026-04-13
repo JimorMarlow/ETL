@@ -152,6 +152,7 @@ namespace etl
         template<typename T>
         class data : public notify
         {
+        protected:
             String   _path; // Путь к файлу для сохранения настроек
             FileData _fd;   // Управление загрузкой данных в файловую система
             T        _data; // структура данных
@@ -163,6 +164,8 @@ namespace etl
             , _fd (&LittleFS, path.c_str(), 'B', &_data, sizeof(_data), update_timeout)
             , _data(default_data)
             {}
+
+            virtual ~data() = default;
 
             bool init()    // Инициализировать все настройки и считать значения из памяти или записать по-умолчанию в первый раз
             {
@@ -271,7 +274,7 @@ namespace etl
         template<typename T>
         class app_data : public data<T>
         {
-        private:
+        protected:
             bool _is_initialized = false;
             String _trace_name;
             T      _default; // значение по умолчанию, запоминается в init()
