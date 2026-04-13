@@ -267,37 +267,77 @@ namespace etl
 
         // Расширенный шаблонный класс для хранения настроек приложения
         // T - тип данных настроек
-        // path - путь к файлу настроек
-        // update_timeout - таймаут отложенной записи в мс
-        // trace_name - имя для трассировки (по умолчанию пустое)
-        template<typename T, const char* path, uint16_t update_timeout, const char* trace_name = "">
+        // Параметры конструктора: path, update_timeout, trace_name, default_data
+        template<typename T>
         class app_data : public data<T>
         {
         private:
             bool _is_initialized = false;
+            String _trace_name;
+            T      _default; // значение по умолчанию, запоминается в init()
 
             // Получить строку для трассировки
             String get_trace_prefix() const
             {
-                if constexpr (trace_name[0] != '\0') {
-                    return String("[") + trace_name + "] ";
+                if (!_trace_name.isEmpty()) {
+                    return String("[") + _trace_name + "] ";
                 }
                 return "";
             }
 
         public:
             // Конструктор передаёт параметры в базовый класс data
-            app_data(const T& default_data = T())
+            app_data(const String& path, uint16_t update_timeout = 5000, const String& trace_name = "", const T& default_data = T())
             : data<T>(path, update_timeout, default_data)
+            , _trace_name(trace_name)
             {}
 
             // Проверка инициализации
             bool is_initialized() const { return _is_initialized; }
 
             /**
+             * @brief Сбросить настройки к значениям по умолчанию
+             * @return true при успешном сохранении
+             */
+            virtual bool reset()
+            {
+                String prefix = get_trace_prefix();
+                if (!prefix.isEmpty()) {
+                    Serial.print(prefix);
+                    Serial.println(F("reset() ..."));
+                }
+
+                auto loaded_info = data<T>::get();
+                if (!prefix.isEmpty()) {
+                    Serial.print(prefix);
+                    Serial.println(F("loaded from memory:"));
+                }
+                if constexpr (has_trace_v<T>) {
+                    loaded_info.trace();
+                }
+
+                // Устанавливаем значения по умолчанию и сохраняем
+                data<T>::set(_default);
+                bool reset_result = data<T>::save();
+
+                if (!prefix.isEmpty()) {
+                    Serial.print(prefix);
+                    Serial.print(F("reset: "));
+                    Serial.println(reset_result ? F("OK") : F("FAILED"));
+                }
+                if (reset_result) {
+                    if constexpr (has_trace_v<T>) {
+                        _default.trace();
+                    }
+                }
+
+                return reset_result;
+            }
+
+            /**
              * @brief Инициализация данных приложения
              * @param default_info Значения по умолчанию
-             * @param reset_to_default Сбросить к значениям по умолчанию
+             * @param reset_to_default Сбросить к значениям по умолчанию после инициализации
              * @return true при успешной инициализации
              */
             virtual bool init(const T& default_info, bool reset_to_default = false)
@@ -311,12 +351,15 @@ namespace etl
                 if (etl::little_fs::begin())
                 {
                     // Создание директории для файла настроек
-                    etl::little_fs::create_dir(path);
+                    etl::little_fs::create_dir(data<T>::_path);
                 }
 
                 // Сохранение настроек в постоянной памяти
                 if (!is_initialized())
                 {
+                    // Запоминаем значения по умолчанию
+                    _default = default_info;
+
                     bool result = data<T>::init();
                     if (!prefix.isEmpty()) {
                         Serial.print(prefix);
@@ -326,33 +369,7 @@ namespace etl
 
                     if (result && reset_to_default)
                     {
-                        if (!prefix.isEmpty()) {
-                            Serial.print(prefix);
-                            Serial.println(F("resetting to default ..."));
-                        }
-                        auto loaded_info = data<T>::get();
-                        if (!prefix.isEmpty()) {
-                            Serial.print(prefix);
-                            Serial.println(F("loaded from memory:"));
-                        }
-                        if constexpr (has_trace_v<T>) {
-                            loaded_info.trace();
-                        }
-
-                        // Выполняем сброс: устанавливаем значения по умолчанию и сохраняем
-                        data<T>::set(default_info);
-                        bool reset_result = data<T>::save();
-
-                        if (!prefix.isEmpty()) {
-                            Serial.print(prefix);
-                            Serial.print(F("reset to default: "));
-                            Serial.println(reset_result ? F("OK") : F("FAILED"));
-                        }
-                        if (reset_result) {
-                            if constexpr (has_trace_v<T>) {
-                                default_info.trace();
-                            }
-                        }
+                        reset();
                     }
 
                     _is_initialized = true;
@@ -674,15 +691,11 @@ struct kitchen_light_t
     }
 };
 
-// 2. Объявляем константы для шаблона (должны быть extern constexpr или глобальные)
-constexpr const char* kitchen_light_path = "/settings/light_control.cfg";
-constexpr const char* kitchen_light_trace = "light_control::data";
+// 2. Используем — алиас для удобства (не обязательно)
+using kitchen_light_data_t = etl::settings::app_data<kitchen_light_t>;
 
-// 3. Создаём алиас для удобства использования
-using kitchen_light_data_t = etl::settings::app_data<kitchen_light_t, kitchen_light_path, 30000, kitchen_light_trace>;
-
-// 4. Используем
-kitchen_light_data_t lc_data;
+// 3. Создаём экземпляр с параметрами: path, update_timeout, trace_name
+kitchen_light_data_t lc_data("/settings/light_control.cfg", 30000, "light_control::data");
 
 void setup()
 {
