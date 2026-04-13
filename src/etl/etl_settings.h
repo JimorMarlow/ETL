@@ -14,6 +14,7 @@
 #include <Arduino.h>
 #include <FileData.h>
 #include "etl_littlefs.h"
+#include "etl_optional.h"
 
 // Инициализация файловой системы
 namespace etl
@@ -218,9 +219,9 @@ namespace etl
                 return true;
             }
 
-            void tick()    // Вызывать в loop() для контроля отложенной записи
+            FDstat_t tick()    // Вызывать в loop() для контроля отложенной записи
             {
-                _fd.tick();
+                return _fd.tick();
             }
 
             // Получить настройки
@@ -261,6 +262,184 @@ namespace etl
             bool save() {
                 auto fd_result = _fd.updateNow();
                 return (fd_result == FD_WRITE || fd_result == FD_NO_DIF);
+            }
+        };
+
+        // Расширенный шаблонный класс для хранения настроек приложения
+        // T - тип данных настроек
+        // path - путь к файлу настроек
+        // update_timeout - таймаут отложенной записи в мс
+        // trace_name - имя для трассировки (по умолчанию пустое)
+        template<typename T, const char* path, uint16_t update_timeout, const char* trace_name = "">
+        class app_data : public data<T>
+        {
+        private:
+            bool _is_initialized = false;
+
+            // Получить строку для трассировки
+            String get_trace_prefix() const
+            {
+                if constexpr (trace_name[0] != '\0') {
+                    return String("[") + trace_name + "] ";
+                }
+                return "";
+            }
+
+        public:
+            // Конструктор передаёт параметры в базовый класс data
+            app_data(const T& default_data = T())
+            : data<T>(path, update_timeout, default_data)
+            {}
+
+            // Проверка инициализации
+            bool is_initialized() const { return _is_initialized; }
+
+            /**
+             * @brief Инициализация данных приложения
+             * @param default_info Значения по умолчанию
+             * @param reset_to_default Сбросить к значениям по умолчанию
+             * @return true при успешной инициализации
+             */
+            virtual bool init(const T& default_info, bool reset_to_default = false)
+            {
+                String prefix = get_trace_prefix();
+                if (!prefix.isEmpty()) {
+                    Serial.print(prefix);
+                    Serial.println(F("init() ..."));
+                }
+
+                if (etl::little_fs::begin())
+                {
+                    // Создание директории для файла настроек
+                    etl::little_fs::create_dir(path);
+                }
+
+                // Сохранение настроек в постоянной памяти
+                if (!is_initialized())
+                {
+                    bool result = data<T>::init();
+                    if (!prefix.isEmpty()) {
+                        Serial.print(prefix);
+                        Serial.print(F("init() result: "));
+                        Serial.println(result ? F("OK") : F("FAILED"));
+                    }
+
+                    if (result && reset_to_default)
+                    {
+                        if (!prefix.isEmpty()) {
+                            Serial.print(prefix);
+                            Serial.println(F("resetting to default ..."));
+                        }
+                        auto loaded_info = data<T>::get();
+                        if (!prefix.isEmpty()) {
+                            Serial.print(prefix);
+                            Serial.println(F("loaded from memory:"));
+                        }
+                        if constexpr (has_trace_v<T>) {
+                            loaded_info.trace();
+                        }
+
+                        // Выполняем сброс: устанавливаем значения по умолчанию и сохраняем
+                        data<T>::set(default_info);
+                        bool reset_result = data<T>::save();
+
+                        if (!prefix.isEmpty()) {
+                            Serial.print(prefix);
+                            Serial.print(F("reset to default: "));
+                            Serial.println(reset_result ? F("OK") : F("FAILED"));
+                        }
+                        if (reset_result) {
+                            if constexpr (has_trace_v<T>) {
+                                default_info.trace();
+                            }
+                        }
+                    }
+
+                    _is_initialized = true;
+                    return result;
+                }
+
+                if (!prefix.isEmpty()) {
+                    Serial.print(prefix);
+                    Serial.println(F("init() result: ALREADY INITED"));
+                }
+                return true;
+            }
+
+            /**
+             * @brief Установить новые значения
+             * @param info Новые настройки
+             * @param sender Указывает, кто изменил настройки
+             * @return true при успешном сохранении
+             */
+            virtual bool set(const T& info, sender_id sender)
+            {
+                String prefix = get_trace_prefix();
+                if (!prefix.isEmpty()) {
+                    Serial.printf("%sset(), sender_id = %d\n", prefix.c_str(), static_cast<uint8_t>(sender));
+                }
+
+                if (is_initialized())
+                {
+                    bool result = data<T>::set(info, sender);
+                    return result;
+                }
+
+                if (!prefix.isEmpty()) {
+                    Serial.print(prefix);
+                    Serial.println(F("set() error: data not initialized"));
+                }
+                return false;
+            }
+
+            /**
+             * @brief Считать текущие значения
+             * @return optional с данными или пустой optional
+             */
+            virtual etl::optional<T> get()
+            {
+                String prefix = get_trace_prefix();
+                if (!prefix.isEmpty()) {
+                    Serial.print(prefix);
+                    Serial.println(F("get()"));
+                }
+
+                if (is_initialized())
+                {
+                    return data<T>::get();
+                }
+                else
+                {
+                    if (!prefix.isEmpty()) {
+                        Serial.print(prefix);
+                        Serial.println(F("get(): data not initialized, returning empty optional"));
+                    }
+                    return etl::nullopt;
+                }
+            }
+
+            /**
+             * @brief Вызывать в loop() для отложенного сохранения в постоянную память
+             */
+            virtual void tick()
+            {
+                if (is_initialized())
+                {
+                    auto result = data<T>::tick();
+                    String prefix = get_trace_prefix();
+                    if (!prefix.isEmpty()) {
+                        if (result == FD_WRITE)
+                        {
+                            Serial.print(prefix);
+                            Serial.println(F("tick(): pending write successful"));
+                        }
+                        else if (result == FD_NO_DIF)
+                        {
+                            Serial.print(prefix);
+                            Serial.println(F("tick(): pending write skipped - data not changed"));
+                        }
+                    }
+                }
             }
         };
     }//..settings
@@ -474,6 +653,61 @@ public:
         _settings.unsubscribe(etl::settings::sender_id::user2);
     }
 };
+
+// ========================
+// Использование app_data
+// ========================
+
+// 1. Определяем структуру настроек
+struct kitchen_light_t
+{
+    bool    state      = false;
+    float   brightness = 1.0;
+    char    topic[20]  = "kitchen_light/state";
+
+    void trace() {
+        Serial.println("=== kitchen_light_t settings ===");
+        Serial.printf("state = %s\n", state ? "ON" : "OFF");
+        Serial.printf("brightness = %g\n", brightness);
+        Serial.printf("topic = %s\n", topic);
+        Serial.println("========================");
+    }
+};
+
+// 2. Объявляем константы для шаблона (должны быть extern constexpr или глобальные)
+constexpr const char* kitchen_light_path = "/settings/light_control.cfg";
+constexpr const char* kitchen_light_trace = "light_control::data";
+
+// 3. Создаём алиас для удобства использования
+using kitchen_light_data_t = etl::settings::app_data<kitchen_light_t, kitchen_light_path, 30000, kitchen_light_trace>;
+
+// 4. Используем
+kitchen_light_data_t lc_data;
+
+void setup()
+{
+    kitchen_light_t default_settings;
+    lc_data.init(default_settings, false);
+
+    // Подписка на изменения
+    lc_data.subscribe(etl::settings::sender_id::webui, [](etl::settings::sender_id source) {
+        Serial.println("Light settings changed from web UI");
+    });
+}
+
+void loop()
+{
+    lc_data.tick();  // Отложенная запись
+}
+
+void change_brightness(float value)
+{
+    auto current = lc_data.get();
+    if (current) {
+        current->brightness = value;
+        lc_data.set(*current, etl::settings::sender_id::system);
+    }
+}
 
 */
 
