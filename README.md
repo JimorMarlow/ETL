@@ -27,6 +27,8 @@ https://github.com/JimorMarlow/etl
 **Dependancy:**
 `GTimer` by AlexGyver ([gyverlibs/GTimer@^1.1.1](https://github.com/GyverLibs/GTimer))
 `Filedata` by AlexGyver ([gyverlibs/FileData@^1.0.3](https://github.com/GyverLibs/FileData))
+`ArduinoJson` by bblanchon ([bblanchon/ArduinoJson@^7.0.0](https://github.com/bblanchon/ArduinoJson))
+`PubSubClient` by knolleary  ([knolleary/PubSubClient@^2.8](https://github.com/knolleary/pubsubclient))
 
 Note to Alex Gyver:
 *Большое спасибо за уроки и библиотеки! etl, в общем-то, и началась только для того, чтобы добавить функционал, которого не было у Алекса. Например, при добавлении элементов в фильтр первые отсчеты были нулевые. Решил сделать свою реализацию медианного и скользящего среднего, и понеслось. Мой основной подход к написанию кода на Arduino: если есть у AlexGyver - используем его библиотеки (https://alexgyver.ru/), не хватает, или хочется сделать по-своему - делаю сам...*
