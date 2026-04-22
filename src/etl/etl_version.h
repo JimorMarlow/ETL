@@ -5,9 +5,9 @@
 // > python sync_version.py
 // and config files: library.json, library.properties, package.json will be patched...
 
-#define ETL_VERSION_MAJOR 0
-#define ETL_VERSION_MINOR 9
-#define ETL_VERSION_PATCH 37
+#define ETL_VERSION_MAJOR 1
+#define ETL_VERSION_MINOR 0
+#define ETL_VERSION_PATCH 0
 
 // Хелпер для stringify
 #define ETL_STRINGIFY_HELPER(x) #x
