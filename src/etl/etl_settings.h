@@ -63,6 +63,8 @@ namespace etl
             count           // Счётчик для валидации (не используется клиентами)
         };
 
+        String to_string(sender_id id); // NOTE: после добавления нового sender_id - нужно обновить эту функцию
+
         // Тип callback'а для уведомления об изменениях
         using change_callback = std::function<void(sender_id)>;
 
