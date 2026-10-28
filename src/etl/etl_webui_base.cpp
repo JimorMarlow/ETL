@@ -4,15 +4,15 @@
  *
  * Платформа: ESP8266 (NodeMCU v3), ESP32
  */
-
-#if defined(ESP8266) || defined(ESP32)
+#include "etl_defines.h"
+#if defined(ETL_ESP8266) || defined(ETL_ESP32)
 
 #include "etl_webui_base.h"
 #include "etl_webui.h"  // Для server_setup
 
-#if defined(ESP8266)
+#if defined(ETL_ESP8266)
   #include <ESP8266mDNS.h>
-#elif defined(ESP32)
+#elif defined(ETL_ESP32)
   #include <ESPmDNS.h>
 #endif
 
@@ -293,7 +293,7 @@ namespace etl
         void web_server_base_t::handle_client()
         {
             if (m_server) {
-#ifdef ESP8266
+#ifdef ETL_ESP8266
                 MDNS.update();
 #endif
                 m_server->handleClient();
@@ -302,7 +302,7 @@ namespace etl
             // Обработка отложенных callback'ов с задержкой
             // Даём N тиков на отправку ответа клиенту перед переключением сервера
             if (m_pending_cb_counter > 0) {
-                m_pending_cb_counter--;
+                m_pending_cb_counter = m_pending_cb_counter - 1;
                 if (m_pending_cb_counter == 0) {
                     // Время выполнить callback
                     if (m_pending_settings_cb) {
@@ -351,9 +351,9 @@ namespace etl
         void web_server_base_t::reboot()
         {
             Serial.println(F("[WebUI] Rebooting..."));
-#if defined(ESP8266)
+#if defined(ETL_ESP8266)
             ESP.reset();
-#elif defined(ESP32)
+#elif defined(ETL_ESP32)
             ESP.restart();
 #endif
         }
@@ -376,9 +376,9 @@ namespace etl
         void web_server_base_t::disconnect()
         {
             Serial.println(F("[WebUI] Disconnecting..."));
-#if defined(ESP8266)
+#if defined(ETL_ESP8266)
             WiFi.disconnect(true);
-#elif defined(ESP32)
+#elif defined(ETL_ESP32)
             WiFi.disconnect(true);
 #endif
             m_connection_status = connection_status_t::disconnected;
@@ -679,7 +679,7 @@ namespace etl
 
         String web_server_base_t::get_encryption_type(uint8_t type) const
         {
-#ifdef ESP8266
+#ifdef ETL_ESP8266
             switch (type) {
                 case ENC_TYPE_NONE:
                     return "Open";
@@ -694,7 +694,7 @@ namespace etl
                 default:
                     return "Unknown";
             }
-#elif defined(ESP32)
+#elif defined(ETL_ESP32)
             switch (type) {
                 case WIFI_AUTH_OPEN:
                     return "Open";

@@ -42,6 +42,26 @@ Note to Alex Gyver:
 
 ## Version Hystory | История версий
 
+### v1.1.0 (2026-10-28)
+
+- API ядра ESP32 3.x
+- Добавлены макросы сборки etl_defines.h ETL_ESP8266 и ETL_ESP32 для всего семейства esp32 без использования ESP32
+- platformio.ini: lib_ldf_mode = deep (иначе не подтягивались стандартные библиотеки FS и NetworkControl)
+- Исправления в esp_led.*
+  - Новое API работает по пину или по каналу; мы выбрали канал - ledcWriteChannel(_pwm_channel, v) + кэш _last_pwm	
+  - API ядра ESP32 3.x - void init_pwm(...), ledcDetach + ledcAttachChannel	
+  - Учитывает разрешение: 8 бит → 255, 10 бит → 1023 - int max_pwm() const { return (1 << _pwm_resolution) - 1; }
+  - Корректно освобождает ресурсы - ~led() с ledcDetach(_pin) / analogWrite(_pin, 0)
+  - Явное «не инициализирован», не путается с валидным каналом 0 - _pwm_channel = -1 + is_pwm_initialized()
+  - analogRead читал ADC, а не текущее значение ШИМ — это была ошибка - кэш _last_pwm   
+  - Убирает неявное сужение double → float - etl::clamp<float>(brightness, 0.0f, 1.0f)
+  Замечания
+  - MAX_PWMRANGE больше нет. Если он используется в других файлах — замените на max_pwm(). Например, в set_pwm было etl::clamp(pwm_value, MIN_PWMRANGE, MAX_PWMRANGE), стало etl::clamp(pwm_value, MIN_PWMRANGE, max_pwm()).
+  - _last_pwm как источник истины. На ESP8266 нет способа прочитать текущее значение ШИМ, поэтому используется кэш. Для единообразия — кэш и на ESP32. Если нужна точная аппаратная читка, замените get_pwm() на return (int)ledcReadChannel(_pwm_channel); (только для ESP32).
+  - get_pwm() всегда возвращает _last_pwm, даже если init_pwm не вызывался. Раньше на ESP8266 analogRead тоже работал без инициализации, так что поведение согласовано.
+  - _pin и деструктор. Если пользователь создал led(pin) но не вызывал init_pwm, _pwm_channel = -1, и деструктор ничего не делает — правильно, освобождать нечего.
+  
+
 ### v0.9.20 (2026-03-05)
 - bug fixes: etl::queue — исправлено использование etl::move
 

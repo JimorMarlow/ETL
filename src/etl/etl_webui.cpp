@@ -5,7 +5,8 @@
  * Платформа: ESP8266 (NodeMCU v3), ESP32
  */
 
-#if defined(ESP8266) || defined(ESP32)
+ #include "etl_defines.h"
+#if defined(ETL_ESP8266) || defined(ETL_ESP32)
 
 #include "etl_webui.h"
 #include "etl_wifi_setup_html.h"
@@ -68,7 +69,7 @@ namespace etl
                 MDNS.addService("http", "tcp", m_config.has_value() ? m_config->port : 80);
                 mdns_service_added = true;
             }
-#ifdef ESP8266
+#ifdef ETL_ESP8266
             MDNS.update();
 #endif
 
@@ -275,9 +276,9 @@ namespace etl
             doc["connected"] = is_connected();
             doc["ssid"] = m_config.has_value() ? m_config->get_wifi_ssid() : "";
             doc["ip"] = get_ip_address();
-#ifdef ESP8266
+#ifdef ETL_ESP8266
             doc["rssi"] = WiFi.RSSI();
-#elif defined(ESP32)
+#elif defined(ETL_ESP32)
             doc["rssi"] = WiFi.RSSI();  // На ESP32 возвращает RSSI текущего подключения
 #endif
             doc["mode"] = get_mode();
@@ -330,7 +331,7 @@ namespace etl
             headers += "\r\n";
             
             // Отправляем заголовки и JSON напрямую через WiFiClient
-#ifdef ESP32
+#ifdef ETL_ESP32
             // ESP32: client() возвращает по значению — сохраняем в переменную
             auto client = m_server->client();
 #else
@@ -382,7 +383,7 @@ namespace etl
 
         void server_setup::handle_api_back()
         {
-#ifdef ESP8266
+#ifdef ETL_ESP8266
             // ESP8266: перезагрузка вместо переключения серверов.
             // Причина: постоянное выделение/освобождение памяти при переключении
             // вызывает фрагментацию кучи и подвисания.

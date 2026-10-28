@@ -8,12 +8,13 @@
 #include "etl_optional.h"
 #include "etl_vector.h"
 #include "etl_utility.h"
+#include "etl_defines.h"
 
-#ifdef ESP32
+#ifdef ETL_ESP32
     #include <WiFi.h>
     #include <esp_now.h>
     #include <esp_wifi.h>
-#elif ESP8266
+#elif defined(ETL_ESP8266)
     #include <ESP8266WiFi.h>
     #include <espnow.h>
     // Добавим из ESP32 для совместимости
@@ -148,7 +149,7 @@ namespace espnow {
         static void set_instance(manager* ptr) {
             auto instance_value = instance();
             instance_value = ptr;
-        #ifdef ESP8266
+        #ifdef ETL_ESP8266
             UNREFERENCED_PARAMETER(instance_value); // warning fix for ESP8266
         #endif    
         //    instance() = ptr;
@@ -163,7 +164,7 @@ namespace espnow {
             }
             
             // Регистрация callback'ов со статическими методами
-        #ifdef ESP8266
+        #ifdef ETL_ESP8266
             esp_now_set_self_role(ESP_NOW_ROLE_COMBO);       // Установка роли для ESP8266 
         #endif
             esp_now_register_send_cb(static_on_data_sent);
@@ -179,7 +180,7 @@ namespace espnow {
         bool add_peer(const uint8_t *mac_addr, uint8_t channel = 0, bool encrypt = false) {
             if (!is_initialized) return false;
             
-        #ifdef ESP8266 
+        #ifdef ETL_ESP8266 
             int result = esp_now_add_peer(const_cast<uint8_t*>(mac_addr), ESP_NOW_ROLE_COMBO, channel, NULL, 0);
         #else //#elif ESP32
             esp_now_peer_info_t peerInfo;
@@ -212,7 +213,7 @@ namespace espnow {
             T msg = message;
             msg.timestamp = millis();
             
-        #ifdef ESP8266
+        #ifdef ETL_ESP8266
             int result = esp_now_send(mac_addr.mac.data(), (uint8_t *)&msg, sizeof(msg));
         #else //#elif ESP32        
         //    esp_err_t result = esp_now_send(mac_addr.mac.data(), (uint8_t *)&msg, sizeof(msg));
