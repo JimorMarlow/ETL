@@ -18,20 +18,7 @@ led::led(int pin, bool state, bool inverse /*= false*/)
 
 led::~led()
 {
-#ifdef ETL_ESP32
-    // Освобождаем LEDC-канал, привязанный к пину
-    if (_pwm_channel >= 0) {
-        ledcDetach(_pin);
-        _pwm_channel = -1;
-    }
-#elif defined(ETL_ESP8266)
-    // Отключаем ШИМ и возвращаем пин в цифровой режим
-    if (_pwm_channel >= 0) {
-        analogWrite(_pin, 0);
-        pinMode(_pin, OUTPUT);
-        _pwm_channel = -1;
-    }
-#endif
+    deinit_pwm();
 }
 
 bool led::get_state()
@@ -64,44 +51,136 @@ void led::write_state(bool state)
     digitalWrite(_pin, new_state);
 }
 
-void led::init_pwm(int pwm_channel, uint32_t frequency /*= DEFAULT_PWM_FREQUENCY*/, uint8_t resolution /*= DEFAULT_PWM_RESOLUTION*/)
-{
-    _pwm_channel    = pwm_channel;
-    _pwm_frequency  = frequency;
-    _pwm_resolution = resolution;
-    _last_pwm       = 0;
+// ---------- PWM init: явный канал ----------
 
-#ifdef ETL_ESP8266
-    analogWriteResolution(_pwm_resolution);
-    analogWriteFreq(_pwm_frequency);
-    // На ESP8266 понятия «канал» нет — просто помечаем ШИМ как инициализированный
-#elif defined(ETL_ESP32)
-    // ESP32 Arduino core 3.x: единый API ledcAttachChannel()
-    // Отвязываем на случай повторного вызова init_pwm()
-    ledcDetach(_pin);
-    if (!ledcAttachChannel(_pin, _pwm_frequency, _pwm_resolution, (uint8_t)_pwm_channel)) {
-        // Канал занят, пин не поддерживает LEDC и т.п.
-        _pwm_channel = -1;
+bool led::init_pwm(int pwm_channel,
+                   uint32_t frequency /*= DEFAULT_PWM_FREQUENCY*/,
+                   uint8_t resolution /*= DEFAULT_PWM_RESOLUTION*/)
+{
+    if (_pwm_initialized) {
+        deinit_pwm();
     }
+
+    if (pwm_channel < 0 || resolution == 0 || resolution > 20 || frequency == 0) {
+        return false;
+    }
+
+#if defined(ETL_ESP8266)
+    // На ESP8266 каналов нет — pwm_channel принимается, но игнорируется
+    if (_pin < 0) return false;
+
+    analogWriteResolution(resolution);
+    analogWriteFreq(frequency);
+    analogWrite(_pin, 0);
+
+    _pwm_channel     = pwm_channel;   // сохраняем для информации
+    _pwm_frequency   = frequency;
+    _pwm_resolution  = resolution;
+    _last_pwm        = 0;
+    _pwm_initialized = true;
+    return true;
+
+#elif defined(ETL_ESP32)
+    if (!ledcAttachChannel(_pin, frequency, resolution, (uint8_t)pwm_channel)) {
+        return false;
+    }
+
+    _pwm_channel     = pwm_channel;
+    _pwm_frequency   = frequency;
+    _pwm_resolution  = resolution;
+    _last_pwm        = 0;
+    _pwm_initialized = true;
+    return true;
+
 #else
     #pragma message("ERROR: led::init_pwm board not defined")
-    _pwm_channel = -1;
+    return false;
 #endif
 }
 
+// ---------- PWM init: авто-канал ----------
+
+bool led::init_pwm(auto_channel_t,
+                   uint32_t frequency /*= DEFAULT_PWM_FREQUENCY*/,
+                   uint8_t resolution /*= DEFAULT_PWM_RESOLUTION*/)
+{
+    if (_pwm_initialized) {
+        deinit_pwm();
+    }
+
+    if (resolution == 0 || resolution > 20 || frequency == 0) {
+        return false;
+    }
+
+#if defined(ETL_ESP8266)
+    if (_pin < 0) return false;
+
+    analogWriteResolution(resolution);
+    analogWriteFreq(frequency);
+    analogWrite(_pin, 0);
+
+    _pwm_channel     = -1;            // канала нет
+    _pwm_frequency   = frequency;
+    _pwm_resolution  = resolution;
+    _last_pwm        = 0;
+    _pwm_initialized = true;
+    return true;
+
+#elif defined(ETL_ESP32)
+    if (!ledcAttach(_pin, frequency, resolution)) {
+        return false;
+    }
+
+    _pwm_channel     = -1;            // канал назначен автоматически, конкретный номер не храним
+    _pwm_frequency   = frequency;
+    _pwm_resolution  = resolution;
+    _last_pwm        = 0;
+    _pwm_initialized = true;
+    return true;
+
+#else
+    #pragma message("ERROR: led::init_pwm board not defined")
+    return false;
+#endif
+}
+
+// ---------- PWM deinit ----------
+
+void led::deinit_pwm()
+{
+    if (!_pwm_initialized) {
+        _pwm_channel = -1;
+        _last_pwm    = 0;
+        return;
+    }
+
+#if defined(ETL_ESP32)
+    ledcDetach(_pin);
+#elif defined(ETL_ESP8266)
+    analogWrite(_pin, 0);
+    pinMode(_pin, OUTPUT);
+#endif
+
+    _pwm_initialized = false;
+    _pwm_channel     = -1;
+    _last_pwm        = 0;
+}
+
+// ---------- PWM write / read ----------
+
 void led::set_pwm(int pwm_value)
 {
+    if (!_pwm_initialized) return;
+
     int value = etl::clamp(pwm_value, MIN_PWMRANGE, max_pwm());
     _last_pwm = value;
 
 #ifdef ETL_ESP8266
-    // На ESP8266 analogWrite работает и без явного init_pwm (с дефолтными частотой/разрешением)
     analogWrite(_pin, value);
 #elif defined(ETL_ESP32)
-    // Без успешного init_pwm писать некуда
-    if (_pwm_channel >= 0) {
-        ledcWriteChannel(_pwm_channel, value);
-    }
+    // В core 3.x ledcWrite работает по пину и корректно разрешает
+    // пин -> канал независимо от того, задавали мы канал явно или через ledcAttach.
+    ledcWrite(_pin, value);
 #else
     #pragma message("ERROR: led::set_pwm board not defined")
 #endif
@@ -110,13 +189,15 @@ void led::set_pwm(int pwm_value)
 int led::get_pwm()
 {
     // Возвращаем последнее записанное значение.
-    // На ESP8266 аппаратного чтения ШИМ нет, кэш — единственный вариант.
-    // На ESP32 тоже используем кэш для одинакового поведения на всех платформах.
+    // На ESP8266 аппаратного чтения ШИМ нет; на ESP32 используем кэш для
+    // одинакового поведения на обеих платформах.
     return _last_pwm;
 }
 
-void led::on()  { set_state(true); }
-void led::off() { set_state(false); }
+// ---------- Digital mode ----------
+
+void led::on()     { set_state(true); }
+void led::off()    { set_state(false); }
 void led::toggle() { set_state(!get_state()); }
 
 void led::blink(uint32_t delay_ms)
@@ -129,6 +210,8 @@ void led::reset()
 {
     _timer_Blink.stop();
 }
+
+// ---------- Fade ----------
 
 bool led::tick()
 {
@@ -162,16 +245,16 @@ bool led::tick()
 void led::fade_in(uint32_t delay_ms)
 {
     etl::vector<fade_t> brigtness_points;
-    brigtness_points.push_back({0, 1.0});
-    brigtness_points.push_back({int(delay_ms), 0.0});
+    brigtness_points.push_back({0, 1.0f});
+    brigtness_points.push_back({int(delay_ms), 0.0f});
     fade(brigtness_points);
 }
 
 void led::fade_out(uint32_t delay_ms)
 {
     etl::vector<fade_t> brigtness_points;
-    brigtness_points.push_back({0, 0.0});
-    brigtness_points.push_back({int(delay_ms), 1.0});
+    brigtness_points.push_back({0, 0.0f});
+    brigtness_points.push_back({int(delay_ms), 1.0f});
     fade(brigtness_points);
 }
 
@@ -184,6 +267,8 @@ void led::fade(const etl::vector<fade_t>& brightness_ranges)
         _timer_Fade = etl::make_unique<GTimer<millis>>(_fade_time_ms, true, GTMode::Interval);
     }
 }
+
+// ---------- Brightness <-> PWM ----------
 
 float led::pwm_to_brightness(int pwm)
 {

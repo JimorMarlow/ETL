@@ -13,6 +13,12 @@
 #define ESP32_PWM_RESOLUTION 10      // bit
 
 namespace etl {
+
+// Тег для выбора режима «авто-канал» в init_pwm().
+// Использование: led.init_pwm(etl::auto_channel, 5000, 10);
+struct auto_channel_t {};
+inline constexpr auto_channel_t auto_channel{};
+
 class led
 {
 public:
@@ -34,9 +40,24 @@ public:
     int max_pwm() const { return (1 << _pwm_resolution) - 1; }
 
     // true, если ШИМ успешно инициализирован через init_pwm()
-    bool is_pwm_initialized() const { return _pwm_channel >= 0; }
+    bool is_pwm_initialized() const { return _pwm_initialized; }
 
-    void init_pwm(int pwm_channel, uint32_t frequency = DEFAULT_PWM_FREQUENCY, uint8_t resolution = DEFAULT_PWM_RESOLUTION);
+    // Явное указание канала ШИМ.
+    // На ESP8266 параметр pwm_channel игнорируется (нет каналов),
+    // но принимается для совместимости API.
+    bool init_pwm(int pwm_channel,
+                  uint32_t frequency = DEFAULT_PWM_FREQUENCY,
+                  uint8_t resolution = DEFAULT_PWM_RESOLUTION);
+
+    // Авто-назначение канала (ESP32: ledcAttach; ESP8266: analogWrite).
+    // Удобно, когда номер канала не важен — рекомендуется как дефолтный вариант.
+    bool init_pwm(auto_channel_t,
+                  uint32_t frequency = DEFAULT_PWM_FREQUENCY,
+                  uint8_t resolution = DEFAULT_PWM_RESOLUTION);
+
+    // Освободить ШИМ-канал и вернуть пин в цифровой режим
+    void deinit_pwm();
+
     void set_pwm(int pwm_value);   // Управление ШИМ (PWM)
     int  get_pwm();
 
@@ -67,10 +88,11 @@ protected:
 
     GTimer<millis> _timer_Blink;
 
-    int         _pwm_channel    = -1;   // -1 = ШИМ не инициализирован
+    bool        _pwm_initialized = false;
+    int         _pwm_channel    = -1;   // информативно; -1 = авто-канал или не инициализирован
     uint32_t    _pwm_frequency  = DEFAULT_PWM_FREQUENCY;
     uint8_t     _pwm_resolution = DEFAULT_PWM_RESOLUTION;
-    int         _last_pwm       = 0;    // Последнее записанное значение (для get_pwm)
+    int         _last_pwm       = 0;    // последнее записанное значение (для get_pwm)
     float       _pwm_gamma      = 2.2;
 
     uint32_t   _fade_time_ms;
