@@ -42,6 +42,17 @@ Note to Alex Gyver:
 
 ## Version Hystory | История версий
 
+### v1.1.2 (2026-10-28)
+
+library.json added section to remove main.cpp from library export
+
+"build": {
+    "srcFilter": [
+      "+<*>",
+      "-<main.cpp>"
+    ]
+  },
+
 ### v1.1.1 (2026-10-28)
 
 - etl-led.* refinement
