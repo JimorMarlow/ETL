@@ -1,77 +1,109 @@
-# ETL — инструкции для агентов
+# ETL — agent instructions
 
-`ETL` — «ещё одна» лёгкая замена STL для Arduino: контейнеры и утилиты
-(`etl::vector`, `array`, `lookup`, `queue`, `optional`, фильтры `etl::filter`,
+`ETL` is "yet another" lightweight STL replacement for Arduino: containers and utilities
+(`etl::vector`, `array`, `lookup`, `queue`, `optional`, `etl::filter` filters,
 `etl::led`, `etl::settings`, `etl::little_fs`, `etl::wifi`, `etl::webui`,
-`etl::mqtt`, `etl::espnow`). Сама библиотека лежит в `src/etl/`, а `src/main.cpp` —
-тестовое приложение, которое на устройстве прогоняет `etl::unittest::test_all(Serial)`.
+`etl::mqtt`, `etl::espnow`). The library itself lives in `src/etl/`, while `src/main.cpp`
+is a test application that runs `etl::unittest::test_all(Serial)` on the device.
 
-## Сборка и проверка
+## Build and verification
 
-`pio` не в PATH — вызывай полный путь:
+`pio` is not in PATH — call it by full path:
 
 ```powershell
-& "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" run                      # все окружения
+& "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" run                      # all environments
 & "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" run -e esp8266
 & "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" run -e esp32c3
 & "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" run -e esp32-wroom-32u
 ```
 
-- Библиотека обязана собираться **во всех трёх** окружениях: ESP8266 и два ESP32.
-  Перед тем как сказать «готово», покажи итог по каждому env (RAM/Flash, ошибки).
-- Ошибки компиляции читай из вывода целиком: сначала первая ошибка, остальные часто её следствие.
-- Прошивка и монитор требуют подключённой платы — **спроси пользователя**:
+- The library must build in **all three** environments: ESP8266 and the two ESP32 ones.
+  Before saying "done", show the result for each env (RAM/Flash, errors).
+- Read compilation errors from the whole output: the first error is the cause, the rest are
+  usually its consequences.
+- Uploading and monitoring require a connected board — **ask the user first**:
 
 ```powershell
 & "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" run -e esp32-wroom-32u -t upload
 & "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" device monitor -b 115200
 ```
 
-- Тестов на ПК нет: тесты живут в `src/etl/etl_test.cpp` и выполняются на плате
-  через `src/main.cpp`. Критерий корректности — сборка всех env плюс прогон тестов
-  на устройстве (когда оно подключено).
-- Полная очистка: `... pio run -t clean`. Не чисти `.pio` без причины — сборка станет дольше.
+- There are no host-side tests: the tests live in `src/etl/etl_test.cpp` and run on the device
+  through `src/main.cpp`. The correctness criterion is a build of every env plus a test run on
+  hardware (when one is connected).
+- Full clean: `... pio run -t clean`. Do not wipe `.pio` without a reason — rebuilds get slower.
 
-## Платформа и зависимости
+## Platform and dependencies
 
-- ESP32-окружения — `platform = espressif32 @ ^8.0.0` (Arduino core 3.x). Не открепляй:
-  в ядре 3.x нет `ledcSetup`/`ledcAttachPin`, `etl_led` работает по пину через
+- ESP32 environments use `platform = espressif32 @ ^8.0.0` (Arduino core 3.x). Do not unpin it:
+  core 3.x has no `ledcSetup`/`ledcAttachPin`; `etl_led` drives PWM per pin through
   `ledcAttach` / `ledcWrite(_pin, v)` / `ledcDetach`.
-- `lib_ldf_mode = deep` (не `deep+`): иначе в сборку не подтягиваются системные
-  библиотеки FS и Network, и сборка ESP32 падает на `Network.h: No such file or directory`.
-- Платформу определяем только макросами `ETL_ESP32` / `ETL_ESP8266` из `etl_defines.h`:
-  в core 3.x `#ifdef ESP32` не срабатывает, и код на ШИМ молча выпадает из сборки.
-- Зависимости зафиксированы (GTimer, FileData, ArduinoJson, PubSubClient). Новую
-  библиотеку добавляй только по просьбе; версии не поднимай «заодно».
+- `lib_ldf_mode = deep` (not `deep+`): otherwise the system FS and Network libraries are not
+  pulled into the build, and the ESP32 build fails with `Network.h: No such file or directory`.
+- Dependencies are pinned (GTimer, FileData, ArduinoJson, PubSubClient). Add a new library only
+  on request; do not bump versions "while at it".
 
-## Что важно не сломать
+## Platform-specific code: ETL_ESP32 / ETL_ESP8266 only
 
-- Совместимость ESP8266 и ESP32 одновременно: платформенные вызовы — под
+**Rule: anything that differs between platforms must go through the `ETL_ESP32` and
+`ETL_ESP8266` macros from `src/etl/etl_defines.h`.**
+
+```cpp
+#include "etl_defines.h"
+
+#if defined(ETL_ESP32)
+    ledcAttach(_pin, frequency, resolution);
+#elif defined(ETL_ESP8266)
+    analogWriteFreq(frequency);
+#else
+    #pragma message("ERROR: led::init_pwm board not defined")
+#endif
+```
+
+- Since v1.1.3 the ESP32 platform is `espressif32 @ ^8.0.0` — Arduino core 3.x (currently
+  `framework-arduinoespressif32` 3.3.12). **`ESP32` is no longer defined there**, so the old
+  `#ifdef ESP32` yields an empty build: the code inside is simply not compiled, leaving a
+  `#pragma message` stub or a body-less function, and the failure only shows up on the device.
+  That is exactly how `etl_led` broke when moving to 8.x.
+- `ESP8266` is still defined, but use `ETL_ESP8266` anyway — so both branches look the same and
+  do not depend on how a particular core defines its macros.
+- Start a new platform-specific file with `#include "etl_defines.h"` (it is idempotent), not with
+  `#include <Arduino.h>`.
+- If the log shows `#warning "ETL: Platform not detected. ETL_ESP8266 / ETL_ESP32 are undefined."`,
+  that is an environment configuration error (or a forgotten include), not a warning to deal with
+  later: platform-specific code does not work in such a build.
+- Core 3.x API: `ledcAttach`/`ledcAttachChannel`, `ledcWrite`/`ledcWriteChannel`, `ledcDetach`.
+  The old `ledcSetup`/`ledcAttachPin` are gone.
+
+## What must not break
+
+- ESP8266 and ESP32 compatibility at the same time: platform calls go under
   `#if defined(ETL_ESP32)` / `#elif defined(ETL_ESP8266)`.
-- Никакого STL: только `etl::` (`vector`, `array`, `lookup`, ...), без исключений и RTTI,
-  без лишних динамических аллокаций — библиотека про экономию RAM.
-- `library.json`: списки `headers` и `build.srcFilter` (там `main.cpp` исключён из экспорта)
-  правь при добавлении/удалении файлов — от этого зависит состав пакета в PlatformIO Registry.
-- Версия: `src/etl/etl_version.h` — источник истины, `sync_version.py` (pre-script сборки)
-  подставляет её в `library.json`, `library.properties`, `package.json`. PATCH — обычные
-  правки, MINOR — новые возможности. После смены версии вручную: `python sync_version.py`.
-- `README.md` — история версий: при релизе добавь раздел на русском в существующем стиле.
-- `littlefs/*.csv` — схемы разделов, `examples/*.xlsx` — расчётные таблицы фильтров.
-  Без необходимости не трогай.
+- No STL: only `etl::` (`vector`, `array`, `lookup`, ...), no exceptions and no RTTI, no
+  unnecessary dynamic allocations — the library is about saving RAM.
+- `library.json`: keep `headers` and `build.srcFilter` (the latter excludes `main.cpp` from the
+  export) in sync when adding or removing files — this defines the package contents in the
+  PlatformIO Registry.
+- Version: `src/etl/etl_version.h` is the source of truth; `sync_version.py` (a build pre-script)
+  copies it into `library.json`, `library.properties`, `package.json`. PATCH for regular changes,
+  MINOR for new features. After changing the version by hand run `python sync_version.py`.
+- `README.md` is the version history: on release add a section in Russian, in the existing style.
+- `littlefs/*.csv` are partition schemes, `examples/*.xlsx` are filter calculation workbooks.
+  Do not touch them without a reason.
 
-## Стиль
+## Style
 
-- Минимальный diff: тот же стиль, те же имена, не переформатируй чужие файлы целиком.
-- Комментарии — по делу и на русском; не комментируй очевидное.
-- Ничего не выкладывай в git самостоятельно. По просьбе подготовь текст коммита
-  (короткий, на русском, в стиле истории: `v1.1.0 feat: API core ESP32 3.x upgrade`)
-  и покажи его — пользователь выложит сам после корректировки.
+- Minimal diff: same style, same names; never reformat someone else's file wholesale.
+- Comments — to the point and in Russian; do not comment the obvious.
+- Never commit or push to git yourself. On request, prepare a commit message (short, in Russian,
+  in the style of the history: `v1.1.0 feat: API core ESP32 3.x upgrade`) and show it — the user
+  pushes it after review.
 
-## Порядок работы
+## Workflow
 
-1. Сначала прочитай затронутые файлы (и `README.md`), потом правь.
-2. Сначала предложи решение и дождись подтверждения — без разрешения код не меняем.
-3. Меняй по одной логической вещи за раз, после каждой — сборка всех env.
-4. Для поиска по коду и проверки чужих правок используй сабагентов, но правки делай сам.
-5. Если сборка падает по причине окружения (нет тулчейна, нет платы, нет сети) — скажи
-   об этом прямо, не выдавай это за ошибку кода.
+1. Read the affected files (and `README.md`) first, only then edit.
+2. Propose the solution and wait for approval first — never change code without permission.
+3. Change one logical thing at a time, and build all envs after each change.
+4. Use subagents for code search and for reviewing others' changes, but make the edits yourself.
+5. If a build fails for an environment reason (no toolchain, no board, no network), say so
+   directly; do not present it as a code bug.
