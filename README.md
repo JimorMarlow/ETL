@@ -42,6 +42,21 @@ Note to Alex Gyver:
 
 ## Version Hystory | История версий
 
+### v1.1.4 AGENTS.md: платформенный код только через ETL_ESP32/ETL_ESP8266 (2026-11-19)
+
+- правило: платформенные ветви — только макросы из etl_defines.h
+- зафиксировано: с v1.1.3 ESP32 на espressif32 ^8.0.0 (core 3.x), ESP32 не определён
+- напоминание про API LEDC ядра 3.x и #warning о неопределённой платформе
+- AGENTS.md переведён на английский (правила без изменений)
+- platformio.ini: "ETL 1.1.x" вместо "1.1.2"
+- версия 1.1.4 в etl_version.h / library.json / library.properties / package.json
+
+### v1.1.3 сборка: espressif32 @ ^8.0.0 (Arduino core 3.x), AGENTS.md (2026-11-19)
+
+- platformio.ini: платформа ESP32 закреплена на ^8.0.0 (core 3.x)
+- platformio.ini: убрана зависимость etl (ставила чужой ETL из реестра)
+- AGENTS.md: инструкции для агентов (три env, core 3.x, запрет STL)
+
 ### v1.1.2 (2026-10-28)
 
 library.json added section to remove main.cpp from library export
