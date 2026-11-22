@@ -6,6 +6,27 @@
 `etl::mqtt`, `etl::espnow`). The library itself lives in `src/etl/`, while `src/main.cpp`
 is a test application that runs `etl::unittest::test_all(Serial)` on the device.
 
+## Canary
+
+Owner of this project: the value of `git config user.name` (currently `JimorMarlow`). Take it
+from git yourself, do not ask. Start **every** answer with the owner's name and a comma, then
+continue the answer on the same line — so it is visible that this file was read and the rule is
+followed:
+
+`JimorMarlow, <the answer>`
+
+Even a one-line answer, an error report or a question starts with it.
+
+## No STL — extend ETL instead
+
+- Do not use STL (`std::vector`, `std::string`, `std::map`, ...) here: only `etl::`, no exceptions,
+  no RTTI, no unnecessary dynamic allocations.
+- If ETL lacks a common tool that the task needs, do not substitute `std::` and do not leave an
+  ad-hoc solution in application code: write it as a library module in an `etl_*` file
+  (`src/etl/etl_<name>.h` + `.cpp`) in the same style, debug it through the test application
+  (`src/main.cpp` → `etl::unittest::test_all`), and when it works propose adding it to the ETL
+  library to the developer.
+
 ## Build and verification
 
 `pio` is not in PATH — call it by full path:
