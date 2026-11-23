@@ -72,8 +72,8 @@ namespace etl
 #ifdef ESP32
         Serial.printf("\tChip: %s\n", ESP.getChipModel());
         Serial.printf("\tCores: %d\n", ESP.getChipCores());
-        Serial.printf("\tFlash size: %u bytes\n", ESP.getFlashChipSize());
-        Serial.printf("\tFree heap: %u bytes\n", ESP.getFreeHeap());
+        Serial.printf("\tFlash size: %u bytes\n", static_cast<unsigned>(ESP.getFlashChipSize()));
+        Serial.printf("\tFree heap: %u bytes\n", static_cast<unsigned>(ESP.getFreeHeap()));
 
         if(little_fs::begin(begin_mode_t::kShowInfo))
         {
@@ -85,8 +85,9 @@ namespace etl
             while (it != NULL) {
                 const esp_partition_t* p = esp_partition_get(it);
                 Serial.printf("  %-12s: 0x%06X - 0x%06X (size: 0x%06X = %u bytes)\n",
-                            p->label, p->address, p->address + p->size,
-                            p->size, p->size);
+                            p->label, static_cast<unsigned>(p->address),
+                            static_cast<unsigned>(p->address + p->size),
+                            static_cast<unsigned>(p->size), static_cast<unsigned>(p->size));
                 it = esp_partition_next(it);
             }
             esp_partition_iterator_release(it);

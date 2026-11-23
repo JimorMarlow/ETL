@@ -525,7 +525,7 @@ namespace etl
         bool manager::connect_to_sta(uint32_t timeout)
         {
             Serial.printf("[etl::wifi::manager] connect_to_sta() SSID: %s, timeout: %u\n",
-                          m_config.wifi_ssid, timeout);
+                          m_config.wifi_ssid, static_cast<unsigned>(timeout));
 
             WiFi.mode(WIFI_STA);
             WiFi.begin(m_config.wifi_ssid, m_config.wifi_password);

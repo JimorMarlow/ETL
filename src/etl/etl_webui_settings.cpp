@@ -436,7 +436,7 @@ namespace etl
             Serial.printf("wifi_ssid       = %s\n", wifi_ssid);
             Serial.printf("wifi_password   = %s\n", wifi_password);
             Serial.printf("port            = %u\n", port);
-            Serial.printf("update_interval = %u\n", update_interval);
+            Serial.printf("update_interval = %u\n", static_cast<unsigned>(update_interval));
             Serial.println(F("========================"));
         }
 

@@ -55,6 +55,10 @@ namespace etl
                 icon_svg.clear();
             }
 
+            /// Конструкторы: объявленный ниже operator= иначе делает неявное копирование устаревшим
+            device_info_t() = default;
+            device_info_t(const device_info_t& other) = default;
+
             /**
              * @brief Оператор присвоения
              * @param other Другой объект device_info_t

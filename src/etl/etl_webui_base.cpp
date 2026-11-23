@@ -574,7 +574,7 @@ namespace etl
                 return 0;
             }
 
-            Serial.printf("[WiFiSetup] Found %d networks\n", count);
+            Serial.printf("[WiFiSetup] Found %d networks\n", static_cast<int>(count));
 
             for (int32_t i = 0; i < count; ++i) {
                 scan_result_t result;
@@ -586,7 +586,8 @@ namespace etl
                 results.push_back(result);
 
                 Serial.printf("[WiFiSetup] Network %d: %s (RSSI: %d, Encryption: %s)\n",
-                              i + 1, result.ssid.c_str(), result.rssi, result.encryption.c_str());
+                              static_cast<int>(i + 1), result.ssid.c_str(),
+                              static_cast<int>(result.rssi), result.encryption.c_str());
             }
 
             // Сортировка по уровню сигнала (убывание) - bubble sort для etl::vector

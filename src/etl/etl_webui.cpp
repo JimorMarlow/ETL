@@ -108,7 +108,7 @@ namespace etl
             int32_t count = scan_networks(m_scan_cache);
             m_scan_timestamp = millis();
 
-            Serial.printf("[WiFiSetup] Scan completed: %d networks\n", count);
+            Serial.printf("[WiFiSetup] Scan completed: %d networks\n", static_cast<int>(count));
 
             send_scan_response();
         }

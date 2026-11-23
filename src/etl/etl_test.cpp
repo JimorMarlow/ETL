@@ -73,8 +73,8 @@ namespace unittest {
         int diff = int(mem_free_before) - int(mem_free);
 
         // Форматируем вывод с выравниванием
-        trace.printf("MEMORY: %5d diff = %5d | %-25s - %s\n",
-                     mem_free, diff, title.c_str(), result.isEmpty() ? "OK" : ("FAILED: " + result).c_str());
+        trace.printf("MEMORY: %5u diff = %5d | %-25s - %s\n",
+                     static_cast<unsigned>(mem_free), diff, title.c_str(), result.isEmpty() ? "OK" : ("FAILED: " + result).c_str());
     }
 
     String test_empty()
@@ -969,7 +969,7 @@ namespace unittest {
             UNREFERENCED_PARAMETER(t);
         }
         uint32_t agv_time = stat.get_average_time();
-        Serial.printf("%s: %d us\n", prefix.c_str(), agv_time);
+        Serial.printf("%s: %u us\n", prefix.c_str(), static_cast<unsigned>(agv_time));
         return agv_time;
     }
 
@@ -1007,9 +1007,9 @@ namespace unittest {
         uint32_t pgm_time = compare_lookup_time("pgm_lookup", resistance_lookup_pgm, step);
         uint32_t arr_time = compare_lookup_time("arr_lookup", resistance_lookup_arr, step);
         uint32_t vec_time = compare_lookup_time("vec_lookup", resistance_lookup_vec, step);
-        trace.printf("%s;\t%d us;\t\n", "pgm_lookup", pgm_time);
-        trace.printf("%s;\t%d us;\t\n", "arr_lookup", arr_time);
-        trace.printf("%s;\t%d us;\t\n", "vec_lookup", vec_time);
+        trace.printf("%s;\t%u us;\t\n", "pgm_lookup", static_cast<unsigned>(pgm_time));
+        trace.printf("%s;\t%u us;\t\n", "arr_lookup", static_cast<unsigned>(arr_time));
+        trace.printf("%s;\t%u us;\t\n", "vec_lookup", static_cast<unsigned>(vec_time));
         // OUTPUT:
         // +----------+------------+------------+------------+
         // | Конфигурация          | pgm_lookup | arr_lookup | vec_lookup |
